@@ -1,0 +1,7 @@
+.text:00403F85     lea     eax, [ebx+VMContext.CurrentInsn.InsnData]       ; EAX := &Instruction->Data[0]
+.text:00403F5C     mov     eax, [eax]                                      ; Read an immediate DWORD from Instruction->Data[0]
+.text:00403F7C     mov     [ebx+VMContext.dwScratch], eax                  ; Store it into the scratch register
+.text:00403F65     add     dword ptr [ebx+VMContext.pCurrInsn], size VMInstruction ; Increment EIP to next instruction
+.text:00403F8D     mov     eax, [ebx+VMContext.fpVMEntry]
+.text:00403F51     mov     esp, [ebx+VMContext.SavedESP1]                  ; Restore host ESP
+.text:00403F6F     jmp     dword ptr [ebx+VMContext.fpVMReEntryToFuncPtr]  ; Re-enter VM with state on stack

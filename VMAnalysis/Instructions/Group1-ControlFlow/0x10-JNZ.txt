@@ -1,0 +1,12 @@
+.text:00403ACB     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData] ; ECX := &Instruction->Data[0]
+.text:00403AAE     mov     eax, [ebx+VMContext.SavedESP1]            ; EAX := Saved ESP
+.text:00403AD7     mov     eax, [eax]                                ; EAX := Saved EFLAGS
+.text:00403AF6     test    eax, 40h                                  ; Test ZF
+.text:00403AB8     jz      short loc_403AC0                          ; Jump if !ZF
+
+; JZ path:
+	.text:00403AC0     jmp     [ebx+VMContext.fpVMRelativeJump]        ; Conditional true
+
+; JNZ path:
+	.text:00403AE3     jmp     [ebx+VMContext.fpVMNext]                ; Conditional false
+

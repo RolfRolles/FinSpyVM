@@ -1,0 +1,21 @@
+.text:004040F1     mov     edi, [ebx+VMContext.pScratch]
+.text:004040BF     mov     eax, [ebx+VMContext.SavedESP1]
+.text:004040DD     and     eax, 2Fh
+.text:00404110     add     edi, eax
+.text:0040412E     push    edi
+.text:00404119     mov     word ptr [edi], 6ACh
+.text:0040408F     xor     word ptr [edi], 6731h
+.text:00404139     add     edi, 2
+.text:004040B1     lea     esi, [ebx+VMContext.CurrentInsn.InsnData]
+.text:00404086     movzx   ecx, byte ptr [ebx+VMContext.CurrentInsn.DataLength]
+.text:004040A2     rep movsb
+.text:0040414F     mov     byte ptr [edi], 0E9h
+.text:00404165     xor     byte ptr [edi], 81h
+.text:0040405E     mov     eax, [ebx+VMContext.fpVMEntry]
+.text:004040CA     mov     [edi+1], eax
+.text:00404068     mov     byte ptr [edi+5], 6Ch
+.text:004040D3     xor     byte ptr [edi+5], 0AFh
+.text:004040E5     add     dword ptr [ebx+VMContext.pCurrInsn], size VMInstruction
+.text:0040415B     pop     eax                         
+.text:004040FD     mov     esp, [ebx+VMContext.SavedESP1]
+.text:00404071     jmp     eax

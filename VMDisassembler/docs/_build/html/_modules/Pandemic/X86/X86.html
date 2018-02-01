@@ -1,0 +1,421 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.X86.X86 &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Pandemic.X86.X86</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;The main module for representing X86 instructions and operands.  Generally,</span>
+<span class="sd">clients will need to import both this module and :mod:`.X86MetaData`.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">X86MetaData</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">Pandemic.Util.HashFunctions</span> <span class="kn">import</span> <span class="n">binary_hash</span>
+<span class="kn">from</span> <span class="nn">Pandemic.Util.Guarded</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">X86Internal</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">Pandemic.Util.ASMFlow</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">HASH_Gd</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">HASH_Gw</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">HASH_Gb</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">HASH_ControlReg</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">HASH_DebugReg</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">HASH_MMXReg</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="n">HASH_XMMReg</span> <span class="o">=</span> <span class="mi">7</span>
+<span class="n">HASH_FPUReg</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">HASH_SegReg</span> <span class="o">=</span> <span class="mi">9</span>
+<span class="n">HASH_Mem16</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">HASH_Mem32</span> <span class="o">=</span> <span class="mi">11</span>
+<span class="n">HASH_AP16</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">HASH_AP32</span> <span class="o">=</span> <span class="mi">13</span>
+<span class="n">HASH_Id</span> <span class="o">=</span> <span class="mi">14</span>
+<span class="n">HASH_Iw</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="n">HASH_Ib</span> <span class="o">=</span> <span class="mi">16</span>
+<span class="n">HASH_JccTarget</span> <span class="o">=</span> <span class="mi">17</span>
+
+<div class="viewcode-block" id="Gd"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Gd">[docs]</a><span class="k">class</span> <span class="nc">Gd</span><span class="p">(</span><span class="n">GeneralReg</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing 32-bit general registers.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">adjust_value</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">HASH_Gd</span><span class="p">,</span><span class="n">R32Elt</span><span class="p">,</span><span class="n">adjust_value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Gw"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Gw">[docs]</a><span class="k">class</span> <span class="nc">Gw</span><span class="p">(</span><span class="n">GeneralReg</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing 16-bit general registers.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">adjust_value</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">HASH_Gw</span><span class="p">,</span><span class="n">R16Elt</span><span class="p">,</span><span class="n">adjust_value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Gb"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Gb">[docs]</a><span class="k">class</span> <span class="nc">Gb</span><span class="p">(</span><span class="n">GeneralReg</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing 8-bit general registers.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">adjust_value</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">HASH_Gb</span><span class="p">,</span><span class="n">R8Elt</span><span class="p">,</span><span class="n">adjust_value</span><span class="p">)</span>	
+</div>
+<div class="viewcode-block" id="ControlReg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.ControlReg">[docs]</a><span class="k">class</span> <span class="nc">ControlReg</span><span class="p">(</span><span class="n">Register</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing control registers.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">adjust_value</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">HASH_ControlReg</span><span class="p">,</span><span class="n">CntElt</span><span class="p">,</span><span class="n">adjust_value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DebugReg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.DebugReg">[docs]</a><span class="k">class</span> <span class="nc">DebugReg</span><span class="p">(</span><span class="n">Register</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing debug registers.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">adjust_value</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">HASH_DebugReg</span><span class="p">,</span><span class="n">DbgElt</span><span class="p">,</span><span class="n">adjust_value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MMXReg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.MMXReg">[docs]</a><span class="k">class</span> <span class="nc">MMXReg</span><span class="p">(</span><span class="n">Register</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing MMX registers.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">adjust_value</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">HASH_MMXReg</span><span class="p">,</span><span class="n">MMXElt</span><span class="p">,</span><span class="n">adjust_value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="XMMReg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.XMMReg">[docs]</a><span class="k">class</span> <span class="nc">XMMReg</span><span class="p">(</span><span class="n">Register</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing XMM registers.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">adjust_value</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">HASH_XMMReg</span><span class="p">,</span><span class="n">XMMElt</span><span class="p">,</span><span class="n">adjust_value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FPUReg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.FPUReg">[docs]</a><span class="k">class</span> <span class="nc">FPUReg</span><span class="p">(</span><span class="n">Register</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing FPU registers.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">adjust_value</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">HASH_FPUReg</span><span class="p">,</span><span class="n">FPUElt</span><span class="p">,</span><span class="n">adjust_value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SegReg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.SegReg">[docs]</a><span class="k">class</span> <span class="nc">SegReg</span><span class="p">(</span><span class="n">Register</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing segment registers.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">adjust_value</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">HASH_SegReg</span><span class="p">,</span><span class="n">SegElt</span><span class="p">,</span><span class="n">adjust_value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Id"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Id">[docs]</a><span class="k">class</span> <span class="nc">Id</span><span class="p">(</span><span class="n">Immediate</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing 32-bit immediate constants.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">HASH_Id</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="mh">0xFFFFFFFF</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Iw"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Iw">[docs]</a><span class="k">class</span> <span class="nc">Iw</span><span class="p">(</span><span class="n">Immediate</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing 16-bit immediate constants.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">HASH_Iw</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="mh">0xFFFF</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Ib"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Ib">[docs]</a><span class="k">class</span> <span class="nc">Ib</span><span class="p">(</span><span class="n">Immediate</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing 8-bit immediate constants.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">HASH_Ib</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="mh">0xFF</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AP16"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.AP16">[docs]</a><span class="k">class</span> <span class="nc">AP16</span><span class="p">(</span><span class="n">FarTarget</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing 16-bit segment:offset memory locations.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">off</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">HASH_AP16</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">off</span><span class="p">,</span><span class="mh">0xFFFF</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AP32"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.AP32">[docs]</a><span class="k">class</span> <span class="nc">AP32</span><span class="p">(</span><span class="n">FarTarget</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing 32-bit segment:offset memory locations.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">off</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">HASH_AP32</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">off</span><span class="p">,</span><span class="mh">0xFFFFFFFF</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="JccTarget"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.JccTarget">[docs]</a><span class="k">class</span> <span class="nc">JccTarget</span><span class="p">(</span><span class="n">Operand</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing jump targets.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">taken</span><span class="p">,</span><span class="n">nottaken</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_taken</span>    <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">taken</span><span class="p">,</span><span class="mh">0xFFFFFFFF</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_nottaken</span> <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">nottaken</span><span class="p">,</span><span class="mh">0xFFFFFFFF</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_hashcode</span> <span class="o">=</span> <span class="n">HASH_JccTarget</span>
+	
+	<span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="s">&quot;JccTarget(</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_taken</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">_nottaken</span><span class="p">)</span>
+
+	<span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">X86Hexify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_taken</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+	<span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">==</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_taken</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_taken</span><span class="o">.</span><span class="n">value</span> <span class="ow">and</span> \
+		<span class="bp">self</span><span class="o">.</span><span class="n">_nottaken</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_nottaken</span><span class="o">.</span><span class="n">value</span>
+</div>
+<div class="viewcode-block" id="Mem16"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Mem16">[docs]</a><span class="k">class</span> <span class="nc">Mem16</span><span class="p">(</span><span class="n">MemExpr</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing 16-bit memory expressions.</span>
+<span class="sd">	</span>
+<span class="sd">	:ivar `.R16Elt` BaseReg: The base register, or ``None``.</span>
+<span class="sd">	:ivar `.R16Elt` IndexReg: The index register, or ``None``.</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">size</span><span class="p">,</span><span class="n">basereg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">indexreg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">disp</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">adjust_values</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">HASH_Mem16</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">size</span><span class="p">,</span><span class="n">R16Elt</span><span class="p">,</span><span class="n">basereg</span><span class="p">,</span><span class="n">indexreg</span><span class="p">,</span><span class="n">disp</span><span class="p">,</span><span class="mh">0xFFFF</span><span class="p">,</span><span class="n">adjust_values</span><span class="p">)</span>
+	
+	<span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">==</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">BaseReg</span> <span class="ow">and</span> \
+		<span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">IndexReg</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">Disp</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">Disp</span> <span class="ow">and</span> \
+		<span class="bp">self</span><span class="o">.</span><span class="n">Seg</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">Seg</span>
+	
+	<span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">seg</span><span class="p">):</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="n">seg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Mem16.DefaultSeg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Mem16.DefaultSeg">[docs]</a>	<span class="k">def</span> <span class="nf">DefaultSeg</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;16-bit memory expressions use ``SS`` by default if the base register is</span>
+<span class="sd">		``Bp``, and ``DS`` otherwise.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: :class:`~.SegElt`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="n">SS</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span> <span class="o">==</span> <span class="n">Bp</span> <span class="k">else</span> <span class="n">DS</span>
+</div>
+	<span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="s">&quot;Mem16(</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Seg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Mem16.String"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Mem16.String">[docs]</a>	<span class="k">def</span> <span class="nf">String</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="n">sb</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span>  <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span>  <span class="o">!=</span> <span class="bp">None</span> <span class="k">else</span> <span class="s">&quot;&quot;</span>
+		<span class="n">ss</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span> <span class="o">!=</span> <span class="bp">None</span> <span class="k">else</span> <span class="s">&quot;&quot;</span>
+		<span class="n">sd</span> <span class="o">=</span> <span class="n">X86Hexify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">)</span>  <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Disp</span>     <span class="o">!=</span> <span class="bp">None</span> <span class="k">else</span> <span class="s">&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">sb</span> <span class="o">==</span> <span class="s">&quot;&quot;</span> <span class="ow">and</span> <span class="n">ss</span> <span class="o">==</span> <span class="s">&quot;&quot;</span> <span class="ow">and</span> <span class="n">sd</span> <span class="o">==</span> <span class="s">&quot;&quot;</span><span class="p">:</span> <span class="n">sd</span> <span class="o">=</span> <span class="s">&quot;0&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">MakeString</span><span class="p">([</span><span class="n">sb</span><span class="p">,</span><span class="n">ss</span><span class="p">,</span><span class="n">sd</span><span class="p">])</span>
+</div></div>
+<div class="viewcode-block" id="Mem32"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Mem32">[docs]</a><span class="k">class</span> <span class="nc">Mem32</span><span class="p">(</span><span class="n">MemExpr</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing 32-bit memory expressions.</span>
+<span class="sd">	</span>
+<span class="sd">	:ivar `.R32Elt` BaseReg: The base register, or ``None``.</span>
+<span class="sd">	:ivar `.R32Elt` IndexReg: The index register, or ``None``.</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">size</span><span class="p">,</span><span class="n">basereg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">indexreg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">scalefac</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">disp</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">adjust_values</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">HASH_Mem32</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">size</span><span class="p">,</span><span class="n">R32Elt</span><span class="p">,</span><span class="n">basereg</span><span class="p">,</span><span class="n">indexreg</span><span class="p">,</span><span class="n">disp</span><span class="p">,</span><span class="mh">0xFFFFFFFF</span><span class="p">,</span><span class="n">adjust_values</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">scalefac</span> <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">scalefac</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">ScaleFac</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;32-bit memory expressions may scale the index register by this value,</span>
+<span class="sd">		which is in the range of 0-3.  It should be set to ``0`` if there is no </span>
+<span class="sd">		scale factor.  Otherwise, it corresponds to multiplying by </span>
+<span class="sd">		``1 &lt;&lt; ScaleFac``.  That is, a value of ``1``	corresponds to multiplying</span>
+<span class="sd">		by ``2``; ``2`` corresponds to multiplication by ``4``; and ``3`` denotes</span>
+<span class="sd">		multiplication by ``8``.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalefac</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@ScaleFac.setter</span>
+	<span class="k">def</span> <span class="nf">ScaleFac</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalefac</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+	
+	<span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">==</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">BaseReg</span> <span class="ow">and</span> \
+		<span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">IndexReg</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ScaleFac</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">ScaleFac</span> <span class="ow">and</span> \
+		<span class="bp">self</span><span class="o">.</span><span class="n">Disp</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">Disp</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">Seg</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">Seg</span>
+
+	<span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">seg</span><span class="p">):</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="n">seg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">ScaleFac</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">)</span>
+
+	<span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="s">&quot;Mem32(</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Seg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">ScaleFac</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Mem32.String"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Mem32.String">[docs]</a>	<span class="k">def</span> <span class="nf">String</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="n">sb</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span> <span class="o">!=</span> <span class="bp">None</span> <span class="k">else</span> <span class="s">&quot;&quot;</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+			<span class="n">ss</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span>
+			<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ScaleFac</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+				<span class="n">ss</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">*</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ss</span><span class="p">,</span><span class="mi">1</span><span class="o">&lt;&lt;</span><span class="bp">self</span><span class="o">.</span><span class="n">ScaleFac</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">ss</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+		<span class="n">sd</span> <span class="o">=</span> <span class="n">X86Hexify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Disp</span> <span class="o">!=</span> <span class="bp">None</span> <span class="k">else</span> <span class="s">&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">sb</span> <span class="o">==</span> <span class="s">&quot;&quot;</span> <span class="ow">and</span> <span class="n">ss</span> <span class="o">==</span> <span class="s">&quot;&quot;</span> <span class="ow">and</span> <span class="n">sd</span> <span class="o">==</span> <span class="s">&quot;&quot;</span><span class="p">:</span> <span class="n">sd</span> <span class="o">=</span> <span class="s">&quot;0&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">MakeString</span><span class="p">([</span><span class="n">sb</span><span class="p">,</span><span class="n">ss</span><span class="p">,</span><span class="n">sd</span><span class="p">])</span>
+			</div>
+<div class="viewcode-block" id="Mem32.DefaultSeg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Mem32.DefaultSeg">[docs]</a>	<span class="k">def</span> <span class="nf">DefaultSeg</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;32-bit memory expressions use ``SS`` by default if the base register is</span>
+<span class="sd">		``Ebp`` or ``Esp``, and ``DS`` otherwise.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: :class:`~.SegElt`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="n">SS</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span> <span class="o">==</span> <span class="n">Ebp</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span> <span class="o">==</span> <span class="n">Esp</span> <span class="k">else</span> <span class="n">DS</span>
+	</div>
+<div class="viewcode-block" id="Mem32.HashIndex"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Mem32.HashIndex">[docs]</a>	<span class="k">def</span> <span class="nf">HashIndex</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="n">binary_hash</span><span class="p">(</span><span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span><span class="p">),</span><span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ScaleFac</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">_hashcode</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="Instruction"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Instruction">[docs]</a><span class="k">class</span> <span class="nc">Instruction</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class representing X86 instructions.</span>
+<span class="sd">	</span>
+<span class="sd">	:ivar `.PF1Elt` prefixes: list of group #1 prefixes</span>
+<span class="sd">	:ivar `.MnemElt` mnem: mnemonic</span>
+<span class="sd">	:ivar `.Operand` op1: first operand, or ``None``</span>
+<span class="sd">	:ivar `.Operand` op2: second operand, or ``None``</span>
+<span class="sd">	:ivar `.Operand` op3: third operand, or ``None``</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Instruction.NumOps"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Instruction.NumOps">[docs]</a>	<span class="k">def</span> <span class="nf">NumOps</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Return the number of operands (``0-3``) possessed by this instruction.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: integer</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">op1</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="mi">0</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">op2</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="mi">1</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">op3</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="mi">2</span>
+		<span class="k">return</span> <span class="mi">3</span>
+</div>
+<div class="viewcode-block" id="Instruction.AddPrefix"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Instruction.AddPrefix">[docs]</a>	<span class="k">def</span> <span class="nf">AddPrefix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pfx</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Add a Group #1 prefix.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.PF1Elt` pfx:</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">prefixes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pfx</span><span class="p">)</span>
+	</div>
+<div class="viewcode-block" id="Instruction.GetOp"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Instruction.GetOp">[docs]</a>	<span class="k">def</span> <span class="nf">GetOp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">num</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Retrieve an operand by number.</span>
+<span class="sd">		</span>
+<span class="sd">		:param integer num: which operand</span>
+<span class="sd">		:rtype: :class:`~.Operand`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">num</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">op1</span>
+		<span class="k">if</span> <span class="n">num</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">op2</span>
+		<span class="k">if</span> <span class="n">num</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">op3</span>
+		<span class="k">print</span> <span class="s">&quot;Instruction::GetOp: num </span><span class="si">%d</span><span class="s"> out of bounds&quot;</span> <span class="o">%</span> <span class="n">num</span>
+		<span class="k">raise</span> <span class="ne">IndexError</span>
+	</div>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">prefixes</span><span class="p">,</span><span class="n">mnem</span><span class="p">,</span><span class="n">op1</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">op2</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">op3</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">prefixes</span> <span class="o">=</span> <span class="n">prefixes</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mnem</span><span class="p">,</span><span class="n">MnemElt</span><span class="p">):</span>
+			<span class="k">print</span> <span class="s">&quot;Instruction: mnem </span><span class="si">%s</span><span class="s"> was not of type </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">mnem</span><span class="p">,</span><span class="n">MnemElt</span><span class="p">)</span>
+			<span class="k">raise</span> <span class="ne">TypeError</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">mnem</span> <span class="o">=</span> <span class="n">mnem</span>
+		
+		<span class="bp">self</span><span class="o">.</span><span class="n">op1</span> <span class="o">=</span> <span class="n">op1</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">op2</span> <span class="o">=</span> <span class="n">op2</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">op3</span> <span class="o">=</span> <span class="n">op3</span>
+	
+	<span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="n">pfx</span> <span class="o">=</span> <span class="s">&quot;&quot;</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prefixes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">repr</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">prefixes</span><span class="p">))</span>
+		<span class="k">return</span> <span class="s">&quot;Instruction([</span><span class="si">%s</span><span class="s">],</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pfx</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">mnem</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">op1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">op2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">op3</span><span class="p">)</span>
+		
+<div class="viewcode-block" id="Instruction.MakeString"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.Instruction.MakeString">[docs]</a>	<span class="k">def</span> <span class="nf">MakeString</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parts</span><span class="p">,</span><span class="n">intersperse</span><span class="p">):</span>
+		<span class="n">parts</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">o</span><span class="p">:</span> <span class="s">&quot;&quot;</span> <span class="k">if</span> <span class="n">o</span> <span class="o">==</span> <span class="bp">None</span> <span class="k">else</span> <span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">o</span><span class="p">),</span><span class="n">parts</span><span class="p">)</span>
+		<span class="n">parts</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">o</span><span class="p">:</span> <span class="n">o</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span><span class="p">,</span><span class="n">parts</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">intersperse</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
+</div>
+	<span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="n">pfx</span> <span class="o">=</span> <span class="s">&quot;&quot;</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prefixes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s">&quot;[&quot;</span><span class="o">+</span><span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">prefixes</span><span class="p">))</span><span class="o">+</span><span class="s">&quot;] &quot;</span>
+		<span class="n">opstr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">MakeString</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">op1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">op2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">op3</span><span class="p">],</span><span class="s">&quot;, &quot;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="s">&quot;</span><span class="si">%s%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pfx</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">mnem</span><span class="p">,</span><span class="n">opstr</span><span class="p">)</span>
+		
+	<span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">NumOps</span><span class="p">()</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">NumOps</span><span class="p">()</span> <span class="ow">and</span> \
+		<span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prefixes</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">prefixes</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mnem</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">op1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">op2</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">op3</span><span class="p">)</span>\
+		<span class="o">==</span> <span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">mnem</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">op1</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">op2</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">op3</span><span class="p">)</span>
+							
+	<span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
+		<span class="k">return</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="InvalidInstruction"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.InvalidInstruction">[docs]</a><span class="k">class</span> <span class="nc">InvalidInstruction</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;This exception may be thrown during decoding, if an attempt to decode an</span>
+<span class="sd">	undefined instruction is made, or if an encoded instruction specifies an</span>
+<span class="sd">	illegal operand.  For example, some operands are encoded in such a way that</span>
+<span class="sd">	they might specify a register or memory location, but one of those </span>
+<span class="sd">	possibilities could be illegal.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="n">s</span><span class="p">):</span> <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+</div>
+<div class="viewcode-block" id="X86DecodedInstruction"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.X86DecodedInstruction">[docs]</a><span class="k">class</span> <span class="nc">X86DecodedInstruction</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;A class for packaging the results of instruction decoding.  In particular,</span>
+<span class="sd">	the :class:`Instruction` class does not indicate the address of an </span>
+<span class="sd">	instruction, nor its length, nor which addresses to which the instruction may</span>
+<span class="sd">	transfer control.</span>
+<span class="sd">	</span>
+<span class="sd">	:ivar integer ea: the instruction&#39;s address</span>
+<span class="sd">	:ivar `Instruction` instr: the instruction itself</span>
+<span class="sd">	:ivar integer length: the length of the instruction</span>
+<span class="sd">	:ivar `.FlowType` flow: the instruction&#39;s successor addresses</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="X86DecodedInstruction.CreateFlow"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86.X86DecodedInstruction.CreateFlow">[docs]</a>	<span class="k">def</span> <span class="nf">CreateFlow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Inspect the instruction and its length, and determine which type of</span>
+<span class="sd">		control flow it exhibits (passes control to the next instruction, returns,</span>
+<span class="sd">		conditional jump, etc).  For a complete listing of flow types, see the </span>
+<span class="sd">		:mod:`ASMFlow` module.&quot;&quot;&quot;</span>
+		<span class="n">mnem</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">instr</span><span class="o">.</span><span class="n">mnem</span>
+		<span class="n">op0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">instr</span><span class="o">.</span><span class="n">GetOp</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+		<span class="n">next_addr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ea</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span>
+		<span class="k">if</span> <span class="n">op0</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op0</span><span class="p">,</span><span class="n">JccTarget</span><span class="p">):</span>
+			<span class="k">if</span> <span class="n">mnem</span> <span class="o">==</span> <span class="n">Call</span><span class="p">:</span>
+				<span class="k">return</span> <span class="n">FlowCallDirect</span><span class="p">(</span><span class="n">op0</span><span class="o">.</span><span class="n">_taken</span><span class="o">.</span><span class="n">value</span><span class="p">,</span><span class="n">next_addr</span><span class="p">)</span>
+			<span class="k">if</span> <span class="n">mnem</span> <span class="o">==</span> <span class="n">Jmp</span><span class="p">:</span>
+				<span class="k">return</span> <span class="n">FlowJmpUnconditional</span><span class="p">(</span><span class="n">op0</span><span class="o">.</span><span class="n">_taken</span><span class="o">.</span><span class="n">value</span><span class="p">,</span><span class="n">next_addr</span><span class="p">)</span>
+			<span class="k">if</span> <span class="n">mnem</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Jo</span><span class="p">,</span><span class="n">Jno</span><span class="p">,</span><span class="n">Jb</span><span class="p">,</span><span class="n">Jae</span><span class="p">,</span><span class="n">Jz</span><span class="p">,</span><span class="n">Jnz</span><span class="p">,</span><span class="n">Jbe</span><span class="p">,</span><span class="n">Ja</span><span class="p">,</span><span class="n">Js</span><span class="p">,</span><span class="n">Jns</span><span class="p">,</span><span class="n">Jp</span><span class="p">,</span><span class="n">Jnp</span><span class="p">,</span><span class="n">Jl</span><span class="p">,</span><span class="n">Jge</span><span class="p">,</span><span class="n">Jle</span><span class="p">,</span><span class="n">Jg</span><span class="p">,</span><span class="n">Loopnz</span><span class="p">,</span><span class="n">Loopz</span><span class="p">,</span><span class="n">Loop</span><span class="p">,</span><span class="n">Jcxz</span><span class="p">,</span><span class="n">Jecxz</span><span class="p">]:</span>
+				<span class="k">return</span> <span class="n">FlowJmpConditional</span><span class="p">(</span><span class="n">op0</span><span class="o">.</span><span class="n">_taken</span><span class="o">.</span><span class="n">value</span><span class="p">,</span><span class="n">op0</span><span class="o">.</span><span class="n">_nottaken</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="k">print</span> <span class="s">&quot;CreateFlow:  JccTarget with invalid mnenonic </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">MnemToString</span><span class="p">[</span><span class="n">mnem</span><span class="p">]</span>
+				<span class="k">raise</span> <span class="ne">ValueError</span>
+		<span class="k">elif</span> <span class="n">mnem</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Call</span><span class="p">,</span><span class="n">CallF</span><span class="p">]:</span> <span class="k">return</span> <span class="n">FlowCallIndirect</span><span class="p">(</span><span class="n">next_addr</span><span class="p">)</span>
+		<span class="k">elif</span> <span class="n">mnem</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Jmp</span><span class="p">,</span><span class="n">JmpF</span><span class="p">]:</span>   <span class="k">return</span> <span class="n">FlowJmpIndirect</span><span class="p">()</span>
+		<span class="k">elif</span> <span class="n">mnem</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Ret</span><span class="p">,</span><span class="n">Retf</span><span class="p">,</span><span class="n">Iretd</span><span class="p">,</span><span class="n">Iretw</span><span class="p">]:</span> <span class="k">return</span> <span class="n">FlowReturn</span><span class="p">()</span>
+		<span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="n">FlowOrdinary</span><span class="p">(</span><span class="n">next_addr</span><span class="p">)</span>
+</div>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ea</span><span class="p">,</span><span class="n">instr</span><span class="p">,</span><span class="n">length</span><span class="p">,</span><span class="n">flow</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">ea</span> <span class="o">=</span> <span class="n">ea</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">instr</span> <span class="o">=</span> <span class="n">instr</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">length</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">flow</span> <span class="o">=</span> <span class="n">flow</span> <span class="k">if</span> <span class="n">flow</span> <span class="o">!=</span> <span class="bp">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">CreateFlow</span><span class="p">()</span>
+
+<span class="c">#if __name__==&quot;__main__&quot;:</span>
+<span class="c">#	i = Instruction([],Add,Gb(Al),Gb(Cl))</span>
+<span class="c">#	print &quot;%s&quot; % i</span>
+<span class="c">#	print &quot;%r&quot; % i</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

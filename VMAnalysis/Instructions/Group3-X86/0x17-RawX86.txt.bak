@@ -1,0 +1,21 @@
+.text:00403EC0     mov     edi, [ebx+VMContext.pScratch] ; CODE XREF: .text:00403E1Dj
+.text:00403E8E     mov     eax, [ebx+VMContext.SavedESP1] ; 004024A2: saved ESP before VM entry
+.text:00403EAC     and     eax, 2Fh
+.text:00403EDF     add     edi, eax
+.text:00403EFD     push    edi
+.text:00403EE8     mov     word ptr [edi], 6ACh
+.text:00403E5E     xor     word ptr [edi], 6731h       ; CODE XREF: .text:00403EEDj
+.text:00403F08     add     edi, 2                      ; CODE XREF: .text:00403E63j
+.text:00403E80     lea     esi, [ebx+VMContext.CurrentInsn.InsnData]
+.text:00403E55     movzx   ecx, [ebx+VMContext.CurrentInsn.DataLength]
+.text:00403E71     rep movsb
+.text:00403F1E     mov     byte ptr [edi], 0E9h
+.text:00403F34     xor     byte ptr [edi], 81h
+.text:00403E2D     mov     eax, [ebx+VMContext.fpVMEntry] ; 004022A9: pointer to post-VM-setup entrypoint (pusha/pushf) (0x004020EA for this sample)
+.text:00403E99     mov     [edi+1], eax                ; CODE XREF: .text:00403E30j
+.text:00403E37     mov     byte ptr [edi+5], 6Ch       ; CODE XREF: .text:00403E9Cj
+.text:00403EA2     xor     byte ptr [edi+5], 0AFh
+.text:00403EB4     add     dword ptr [ebx+VMContext.pCurrInsn], 18h
+.text:00403F2A     pop     eax
+.text:00403ECC     mov     esp, [ebx+VMContext.SavedESP1] ; CODE XREF: .text:00403F2Bj
+.text:00403E40     jmp     eax

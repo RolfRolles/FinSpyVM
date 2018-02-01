@@ -1,0 +1,14 @@
+.text:00403C34     mov     edi, [ebx+VMContext.SavedESP1] ; EDI := Host ESP
+.text:00403C5D     mov     esi, [ebx+VMContext.SavedESP1] ; ESI := Host ESP
+.text:00403C75     sub     edi, 4                         ; EDI := 4 bytes below ESP
+.text:00403C18     mov     ecx, 24h                       ; Copy 0x24 bytes (flags+registers)
+.text:00403C2A     cld                                    ; Copy in forward direction
+.text:00403C52     rep movsb                              ; Move saved registers and flags down by one DWORD
+.text:00403C0A     sub     [ebx+VMContext.SavedESP1], 4   ; Subtract 4 from host ESP
+.text:00403C89     mov     ecx, [ebx+VMContext.SavedESP1] ; ECX := Host ESP (updated)
+.text:00403C22     mov     eax, [ebx+VMContext.dwScratch] ; EAX := Scratch register
+.text:00403C6B     mov     [ecx+24h], eax                 ; Save scratch register on host stack above saved registers/flags
+.text:00403C7D     add     [ebx+VMContext.pCurrInsn], size VMInstruction ; Proceed to next instruction
+.text:00403C4A     mov     eax, [ebx+VMContext.fpVMEntry] ; Acquire ordinary VM entry pointer
+.text:00403BFF     mov     esp, [ebx+VMContext.SavedESP1] ; Restore host ESP
+.text:00403C40     jmp     [ebx+VMContext.fpVMReEntryToFuncPtr] ; Re-enter VM, state on stack

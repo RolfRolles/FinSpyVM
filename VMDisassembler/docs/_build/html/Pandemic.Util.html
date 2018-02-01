@@ -1,0 +1,636 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.Util package &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="index.html" />
+    <link rel="up" title="Pandemic package" href="Pandemic.html" />
+    <link rel="next" title="Pandemic.X86 package" href="Pandemic.X86.html" />
+    <link rel="prev" title="Pandemic package" href="Pandemic.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Pandemic.X86.html" title="Pandemic.X86 package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Pandemic.html" title="Pandemic package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="Pandemic.html" accesskey="U">Pandemic package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="pandemic-util-package">
+<h1>Pandemic.Util package<a class="headerlink" href="#pandemic-util-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-Pandemic.Util.Enumerate">
+<span id="pandemic-util-enumerate-module"></span><h2>Pandemic.Util.Enumerate module<a class="headerlink" href="#module-Pandemic.Util.Enumerate" title="Permalink to this headline">¶</a></h2>
+<p>This module simulates C-style enumerations.</p>
+<dl class="class">
+<dt id="Pandemic.Util.Enumerate.EnumElt">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.Enumerate.</code><code class="descname">EnumElt</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Enumerate.html#EnumElt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Enumerate.EnumElt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>This is the base class for all enumeration elements.  In actuality, each
+enumeration shall correspond to a class derived from this one, and each 
+enumeration element shall be an object of that type.</p>
+<dl class="method">
+<dt id="Pandemic.Util.Enumerate.EnumElt.IntValue">
+<code class="descname">IntValue</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Enumerate.html#EnumElt.IntValue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Enumerate.EnumElt.IntValue" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method returns the integer corresponding to a particular 
+enumeration element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">integer</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="Pandemic.Util.Enumerate.enum">
+<code class="descclassname">Pandemic.Util.Enumerate.</code><code class="descname">enum</code><span class="sig-paren">(</span><em>name</em>, <em>names</em>, <em>reprs</em>, <em>sequential</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Enumerate.html#enum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Enumerate.enum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new type derived from <a class="reference internal" href="#Pandemic.Util.Enumerate.EnumElt" title="Pandemic.Util.Enumerate.EnumElt"><code class="xref py py-class docutils literal"><span class="pre">EnumElt</span></code></a>, whose type name is the
+parameter <em>name</em> suffixed with the string &#8220;Elt&#8221;.  Then, create instances of
+that class for each string in <em>sequential</em>, whose Python-level string shall
+be the corresponding element in <em>names</em>, and whose Python-level 
+representation shall be the corresponding element in <em>reprs</em>.  I.e., all 
+three of the mentioned lists must have the same length.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>string</em>) &#8211; the name of the enumeration.</li>
+<li><strong>names</strong> (<em>string</em>) &#8211; a list of names for the enumeration elements, i.e., 
+the values returned by a call to <code class="docutils literal"><span class="pre">str</span></code>.</li>
+<li><strong>reprs</strong> (<em>string</em>) &#8211; a list of representations for the enumeration elements,
+i.e., the values returned by a call to <code class="docutils literal"><span class="pre">repr</span></code>.</li>
+<li><strong>sequential</strong> (<em>string</em>) &#8211; a list of strings, in order, corresponding to the
+variable names of the elements.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">( <cite>type</cite> , <a class="reference internal" href="#Pandemic.Util.Enumerate.EnumElt" title="Pandemic.Util.Enumerate.EnumElt"><code class="xref py py-class docutils literal"><span class="pre">EnumElt</span></code></a> list )</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Pandemic.Util.Enumerate.enum_lower">
+<code class="descclassname">Pandemic.Util.Enumerate.</code><code class="descname">enum_lower</code><span class="sig-paren">(</span><em>name</em>, <em>sequential</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Enumerate.html#enum_lower"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Enumerate.enum_lower" title="Permalink to this definition">¶</a></dt>
+<dd><p>A further-specialized version of <a class="reference internal" href="#Pandemic.Util.Enumerate.enum_strfn" title="Pandemic.Util.Enumerate.enum_strfn"><code class="xref py py-func docutils literal"><span class="pre">enum_strfn()</span></code></a>, used when the <code class="docutils literal"><span class="pre">str</span></code>
+strings for the enumeration elements are the lower-case versions of the 
+representation strings in <em>sequential</em> .</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> (<em>string</em>) &#8211; the name of the enumeration.</li>
+<li><strong>sequential</strong> (<em>string</em>) &#8211; a list of strings, in order, corresponding to the
+Python-level <code class="docutils literal"><span class="pre">repr</span></code> strings for the elements.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Pandemic.Util.Enumerate.enum_specialstr">
+<code class="descclassname">Pandemic.Util.Enumerate.</code><code class="descname">enum_specialstr</code><span class="sig-paren">(</span><em>name</em>, <em>sequential</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Enumerate.html#enum_specialstr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Enumerate.enum_specialstr" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function specializes <a class="reference internal" href="#Pandemic.Util.Enumerate.enum" title="Pandemic.Util.Enumerate.enum"><code class="xref py py-func docutils literal"><span class="pre">enum()</span></code></a>.  <em>sequential</em> is a list of pairs
+of strings, the first being the representation string, the second being the
+<code class="docutils literal"><span class="pre">str</span></code> string.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>string</em>) &#8211; the name of the enumeration.</li>
+<li><strong>sequential</strong> (<em>string</em>) &#8211; a list of strings, in order, corresponding to the
+Python-level <code class="docutils literal"><span class="pre">repr</span></code> strings for the elements.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">( <cite>type</cite> , <a class="reference internal" href="#Pandemic.Util.Enumerate.EnumElt" title="Pandemic.Util.Enumerate.EnumElt"><code class="xref py py-class docutils literal"><span class="pre">EnumElt</span></code></a> list )</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Pandemic.Util.Enumerate.enum_strfn">
+<code class="descclassname">Pandemic.Util.Enumerate.</code><code class="descname">enum_strfn</code><span class="sig-paren">(</span><em>name</em>, <em>strfn</em>, <em>reprs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Enumerate.html#enum_strfn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Enumerate.enum_strfn" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function specializes <a class="reference internal" href="#Pandemic.Util.Enumerate.enum" title="Pandemic.Util.Enumerate.enum"><code class="xref py py-func docutils literal"><span class="pre">enum()</span></code></a>.  Use it when the Python <code class="docutils literal"><span class="pre">str</span></code>
+strings for the enumeration elements are related to the representation 
+strings (in <em>reprs</em> ).  <em>strfn</em> is responsible for producing the <code class="docutils literal"><span class="pre">str</span></code>
+string, given the representation string.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>string</em>) &#8211; the name of the enumeration.</li>
+<li><strong>strfn</strong> (<em>function</em>) &#8211; a function that, given the representation string of
+an enumeration element, creates its Python-level <code class="docutils literal"><span class="pre">str</span></code> string.</li>
+<li><strong>reprs</strong> (<em>string</em>) &#8211; a list of strings, in order, corresponding to the
+Python-level <code class="docutils literal"><span class="pre">repr</span></code> strings for the elements.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">( <cite>type</cite> , <a class="reference internal" href="#Pandemic.Util.Enumerate.EnumElt" title="Pandemic.Util.Enumerate.EnumElt"><code class="xref py py-class docutils literal"><span class="pre">EnumElt</span></code></a> list )</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Pandemic.Util.Enumerate.enum_upper">
+<code class="descclassname">Pandemic.Util.Enumerate.</code><code class="descname">enum_upper</code><span class="sig-paren">(</span><em>name</em>, <em>sequential</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Enumerate.html#enum_upper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Enumerate.enum_upper" title="Permalink to this definition">¶</a></dt>
+<dd><p>A further-specialized version of <a class="reference internal" href="#Pandemic.Util.Enumerate.enum_strfn" title="Pandemic.Util.Enumerate.enum_strfn"><code class="xref py py-func docutils literal"><span class="pre">enum_strfn()</span></code></a>, used when the <code class="docutils literal"><span class="pre">str</span></code>
+strings for the enumeration elements are the upper-case versions of the 
+representation strings in <em>sequential</em> .</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> (<em>string</em>) &#8211; the name of the enumeration.</li>
+<li><strong>sequential</strong> (<em>string</em>) &#8211; a list of strings, in order, corresponding to the
+Python-level <code class="docutils literal"><span class="pre">repr</span></code> strings for the elements.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-Pandemic.Util.Guarded">
+<span id="pandemic-util-guarded-module"></span><h2>Pandemic.Util.Guarded module<a class="headerlink" href="#module-Pandemic.Util.Guarded" title="Permalink to this headline">¶</a></h2>
+<p>This module implements &#8220;guarded&#8221; integers.  They are a fixed size, and are
+always truncated to that size upon creation or modification.  As such, they are
+similar to how integers normally behave in a language like C.  Implementing 
+them this way allows us to represent things that are larger or smaller than
+standard C types.  For example, we can represent a 3-bit integer, or a 9-bit
+integer.</p>
+<dl class="class">
+<dt id="Pandemic.Util.Guarded.GuardedInteger">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.Guarded.</code><code class="descname">GuardedInteger</code><span class="sig-paren">(</span><em>val</em>, <em>mask</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Guarded.html#GuardedInteger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Guarded.GuardedInteger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Guarded integers are always masked to some number of bits, allowing us to
+represent things like 8 and 16-bit integers without littering the code with
+expressions like <code class="docutils literal"><span class="pre">x</span> <span class="pre">&amp;</span> <span class="pre">0xFF</span></code> or <code class="docutils literal"><span class="pre">x</span> <span class="pre">&amp;</span> <span class="pre">0xFFFFFFFF</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Variables:</th><td class="field-body"><strong>mask</strong> (<em>integer</em>) &#8211; A bit-pattern reflecting the legal values of the</td>
+</tr>
+</tbody>
+</table>
+<p>integer.  For example, an 8-bit value will use a <em>mask</em> of <code class="docutils literal"><span class="pre">0xFF</span></code>.</p>
+<dl class="method">
+<dt id="Pandemic.Util.Guarded.GuardedInteger.value">
+<code class="descname">value</code><span class="sig-paren">(</span><em>val</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Guarded.html#GuardedInteger.value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Guarded.GuardedInteger.value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-Pandemic.Util.HashFunctions">
+<span id="pandemic-util-hashfunctions-module"></span><h2>Pandemic.Util.HashFunctions module<a class="headerlink" href="#module-Pandemic.Util.HashFunctions" title="Permalink to this headline">¶</a></h2>
+<p>To simplify the boilerplate involved with hashing in our classes, i.e.,
+implementing the <code class="docutils literal"><span class="pre">__hash__</span></code> method, this module provides binary and unary 
+hash functions whose behavior is modified through a parameter, which is 
+basically a salt.  For a given concrete class, this parameter is known as its
+&#8220;hash code&#8221;.</p>
+<dl class="function">
+<dt id="Pandemic.Util.HashFunctions.binary_hash">
+<code class="descclassname">Pandemic.Util.HashFunctions.</code><code class="descname">binary_hash</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/HashFunctions.html#binary_hash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.HashFunctions.binary_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Binary hash.  Use <code class="docutils literal"><span class="pre">n&amp;7</span></code> to determine one of eight possible binary hash
+functions, and then XOR with the <a href="#id1"><span class="problematic" id="id2">*</span></a>n*th random integer for good measure.  
+Note that I have no idea what I am doing nor what constitutes a &#8220;good 
+measure&#8221;.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>integer</em>) &#8211; first value to hash.</li>
+<li><strong>y</strong> (<em>integer</em>) &#8211; second value to hash.</li>
+<li><strong>n</strong> (<em>integer</em>) &#8211; salt / hash code.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">integer</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="Pandemic.Util.HashFunctions.rol">
+<code class="descclassname">Pandemic.Util.HashFunctions.</code><code class="descname">rol</code><span class="sig-paren">(</span><em>bits</em>, <em>value</em>, <em>amt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/HashFunctions.html#rol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.HashFunctions.rol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of standard rotate left.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="Pandemic.Util.HashFunctions.ror">
+<code class="descclassname">Pandemic.Util.HashFunctions.</code><code class="descname">ror</code><span class="sig-paren">(</span><em>bits</em>, <em>value</em>, <em>amt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/HashFunctions.html#ror"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.HashFunctions.ror" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of standard rotate right.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="Pandemic.Util.HashFunctions.unary_hash">
+<code class="descclassname">Pandemic.Util.HashFunctions.</code><code class="descname">unary_hash</code><span class="sig-paren">(</span><em>x</em>, <em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/HashFunctions.html#unary_hash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.HashFunctions.unary_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unary hash of a value <em>x</em>, implemented by XORing against a list of random
+integers.  To provide salt, use the <em>n</em> parameter (the hash code) to decide 
+which random number to XOR against.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>integer</em>) &#8211; value to hash.</li>
+<li><strong>n</strong> (<em>integer</em>) &#8211; salt / hash code.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">integer</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-Pandemic.Util.Visitor">
+<span id="pandemic-util-visitor-module"></span><h2>Pandemic.Util.Visitor module<a class="headerlink" href="#module-Pandemic.Util.Visitor" title="Permalink to this headline">¶</a></h2>
+<p>This module implements two helper classes for implementing the visitor 
+design pattern, <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor" title="Pandemic.Util.Visitor.Visitor"><code class="xref py py-class docutils literal"><span class="pre">Visitor</span></code></a> and <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor2" title="Pandemic.Util.Visitor.Visitor2"><code class="xref py py-class docutils literal"><span class="pre">Visitor2</span></code></a>.</p>
+<dl class="class">
+<dt id="Pandemic.Util.Visitor.Visitor">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.Visitor.</code><code class="descname">Visitor</code><a class="reference internal" href="_modules/Pandemic/Util/Visitor.html#Visitor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Visitor.Visitor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>This class will help us implement visitor-style program analysis 
+algorithms.  It exports one method, <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor.visit" title="Pandemic.Util.Visitor.Visitor.visit"><code class="xref py py-meth docutils literal"><span class="pre">visit()</span></code></a>, which uses Python&#8217;s type
+introspection functionality to:</p>
+<ol class="arabic simple">
+<li>Retrieve the class name <code class="docutils literal"><span class="pre">CN</span></code> (as a string) for parameter <em>x</em>.</li>
+<li>Determine whether the Visitor class has a callable method named <code class="docutils literal"><span class="pre">visit_CN</span></code>.</li>
+<li>If it does, invoke that method.</li>
+<li>If not, invoke <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor.Default" title="Pandemic.Util.Visitor.Visitor.Default"><code class="xref py py-meth docutils literal"><span class="pre">Visitor.Default()</span></code></a>, which defaults to raising an exception.</li>
+</ol>
+<p>To program a visitor-style algorithm which performs different actions for 
+different classes, derive a class from <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor" title="Pandemic.Util.Visitor.Visitor"><code class="xref py py-class docutils literal"><span class="pre">Visitor</span></code></a>, and declare a method
+called <code class="docutils literal"><span class="pre">visit_CN</span></code> for each class name <code class="docutils literal"><span class="pre">CN</span></code> that you want to handle.  Each
+such method takes one parameter, which shall be an instance of the class 
+indicated by the method&#8217;s name.  Implement your algorithms for handling each 
+class type within these methods.</p>
+<p>To use your class to perform an analysis on an object <em>obj</em>, instantiate an 
+instance of the class derived from <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor" title="Pandemic.Util.Visitor.Visitor"><code class="xref py py-class docutils literal"><span class="pre">Visitor</span></code></a> (let&#8217;s say it is held in
+a variable named <em>v</em>), and then invoke <code class="docutils literal"><span class="pre">v.visit(obj)</span></code>.</p>
+<p>The behaviors of the visitor are configurable:</p>
+<ul class="simple">
+<li>If you want to change the default behavior, override <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor.Default" title="Pandemic.Util.Visitor.Visitor.Default"><code class="xref py py-meth docutils literal"><span class="pre">Visitor.Default()</span></code></a>.</li>
+<li>If you want to change the names of the methods, override <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor.MakeMethodName" title="Pandemic.Util.Visitor.Visitor.MakeMethodName"><code class="xref py py-meth docutils literal"><span class="pre">Visitor.MakeMethodName()</span></code></a>.</li>
+<li>If you want to change how the method is invoked, override <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor.InvokeMethod" title="Pandemic.Util.Visitor.Visitor.InvokeMethod"><code class="xref py py-meth docutils literal"><span class="pre">Visitor.InvokeMethod()</span></code></a>.</li>
+</ul>
+<dl class="method">
+<dt id="Pandemic.Util.Visitor.Visitor.Default">
+<code class="descname">Default</code><span class="sig-paren">(</span><em>method_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Visitor.html#Visitor.Default"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Visitor.Visitor.Default" title="Permalink to this definition">¶</a></dt>
+<dd><p>By default, raise an exception if the method is not present.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Pandemic.Util.Visitor.Visitor.InvokeMethod">
+<code class="descname">InvokeMethod</code><span class="sig-paren">(</span><em>method</em>, <em>o</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Visitor.html#Visitor.InvokeMethod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Visitor.Visitor.InvokeMethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>By default, simply invoke <em>method</em> with <em>o</em> as its sole parameter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>method</strong> (<em>method</em>) &#8211; a method defined on the current class</li>
+<li><strong>o</strong> (<em>object</em>) &#8211; any object type</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Pandemic.Util.Visitor.Visitor.MakeMethodName">
+<code class="descname">MakeMethodName</code><span class="sig-paren">(</span><em>o</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Visitor.html#Visitor.MakeMethodName"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Visitor.Visitor.MakeMethodName" title="Permalink to this definition">¶</a></dt>
+<dd><p>By default, return the string <code class="docutils literal"><span class="pre">visit_CN</span></code>, where <code class="docutils literal"><span class="pre">CN</span></code> is <em>o</em>&#8216;s class
+name.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>o</strong> (<em>object</em>) &#8211; object to inspect</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">string</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The name of the method to invoke.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Pandemic.Util.Visitor.Visitor.visit">
+<code class="descname">visit</code><span class="sig-paren">(</span><em>o</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Visitor.html#Visitor.visit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Visitor.Visitor.visit" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is what clients call to invoke the visitor algorithm.  You should
+never override this method.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Pandemic.Util.Visitor.Visitor2">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.Visitor.</code><code class="descname">Visitor2</code><a class="reference internal" href="_modules/Pandemic/Util/Visitor.html#Visitor2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Visitor.Visitor2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>This class implements the same idea as the previous visitor class, except
+that the <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor2.visit" title="Pandemic.Util.Visitor.Visitor2.visit"><code class="xref py py-meth docutils literal"><span class="pre">visit()</span></code></a> method takes two parameters instead of one.  As 
+before, its behaviors for creating method names, invoking methods, and 
+default actions are configurable &#8211; and you will probably need to use them 
+more often than in standard <a class="reference internal" href="#Pandemic.Util.Visitor.Visitor" title="Pandemic.Util.Visitor.Visitor"><code class="xref py py-class docutils literal"><span class="pre">Visitor</span></code></a> classes.  On the plus
+side, you can play some cool tricks with them, as we shall see.</p>
+<dl class="method">
+<dt id="Pandemic.Util.Visitor.Visitor2.Default">
+<code class="descname">Default</code><span class="sig-paren">(</span><em>method_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Visitor.html#Visitor2.Default"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Visitor.Visitor2.Default" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default behavior:  raise an exception.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Pandemic.Util.Visitor.Visitor2.InvokeMethod">
+<code class="descname">InvokeMethod</code><span class="sig-paren">(</span><em>method</em>, <em>o1</em>, <em>o2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Visitor.html#Visitor2.InvokeMethod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Visitor.Visitor2.InvokeMethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default behavior:  pass both arguments to the method.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Pandemic.Util.Visitor.Visitor2.MakeMethodName">
+<code class="descname">MakeMethodName</code><span class="sig-paren">(</span><em>o1</em>, <em>o2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Visitor.html#Visitor2.MakeMethodName"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Visitor.Visitor2.MakeMethodName" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default behavior:  concatenate the class names.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Pandemic.Util.Visitor.Visitor2.visit">
+<code class="descname">visit</code><span class="sig-paren">(</span><em>o1</em>, <em>o2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/Visitor.html#Visitor2.visit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.Visitor.Visitor2.visit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Never override this method.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-Pandemic.Util.ASMFlow">
+<span id="pandemic-util-asmflow-module"></span><h2>Pandemic.Util.ASMFlow module<a class="headerlink" href="#module-Pandemic.Util.ASMFlow" title="Permalink to this headline">¶</a></h2>
+<p>This module implements a generic class hierarchy for describing 
+assembly-language control tranfer behaviors.  For example:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">nop</span></code> simply transfers control to the next instruction</li>
+<li><code class="docutils literal"><span class="pre">jmp</span></code> transfers control to some fixed location</li>
+<li><code class="docutils literal"><span class="pre">ret</span></code> returns</li>
+</ul>
+<p>This module contains a collection of classes, each deriving from 
+<a class="reference internal" href="#Pandemic.Util.ASMFlow.FlowType" title="Pandemic.Util.ASMFlow.FlowType"><code class="xref py py-class docutils literal"><span class="pre">FlowType</span></code></a>, to describe all possible varieties of control flow.</p>
+<dl class="class">
+<dt id="Pandemic.Util.ASMFlow.FlowCallDirect">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.ASMFlow.</code><code class="descname">FlowCallDirect</code><span class="sig-paren">(</span><em>target</em>, <em>retaddr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowCallDirect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowCallDirect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#Pandemic.Util.ASMFlow.FlowType" title="Pandemic.Util.ASMFlow.FlowType"><code class="xref py py-class docutils literal"><span class="pre">Pandemic.Util.ASMFlow.FlowType</span></code></a></p>
+<p>Direct calls target an address, and also implicitly reference a return 
+address.</p>
+<dl class="method">
+<dt id="Pandemic.Util.ASMFlow.FlowCallDirect.get_successors">
+<code class="descname">get_successors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowCallDirect.get_successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowCallDirect.get_successors" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Pandemic.Util.ASMFlow.FlowCallIndirect">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.ASMFlow.</code><code class="descname">FlowCallIndirect</code><span class="sig-paren">(</span><em>fallthrough</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowCallIndirect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowCallIndirect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#Pandemic.Util.ASMFlow.FlowType" title="Pandemic.Util.ASMFlow.FlowType"><code class="xref py py-class docutils literal"><span class="pre">Pandemic.Util.ASMFlow.FlowType</span></code></a></p>
+<p>The destinations of indirect calls are unknown, but the return address 
+is known.</p>
+<dl class="method">
+<dt id="Pandemic.Util.ASMFlow.FlowCallIndirect.get_successors">
+<code class="descname">get_successors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowCallIndirect.get_successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowCallIndirect.get_successors" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Pandemic.Util.ASMFlow.FlowJmpConditional">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.ASMFlow.</code><code class="descname">FlowJmpConditional</code><span class="sig-paren">(</span><em>target</em>, <em>fallthrough</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowJmpConditional"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowJmpConditional" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#Pandemic.Util.ASMFlow.FlowType" title="Pandemic.Util.ASMFlow.FlowType"><code class="xref py py-class docutils literal"><span class="pre">Pandemic.Util.ASMFlow.FlowType</span></code></a></p>
+<p>Conditional jumps can target two addresses.</p>
+<dl class="method">
+<dt id="Pandemic.Util.ASMFlow.FlowJmpConditional.get_successors">
+<code class="descname">get_successors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowJmpConditional.get_successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowJmpConditional.get_successors" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Pandemic.Util.ASMFlow.FlowJmpIndirect">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.ASMFlow.</code><code class="descname">FlowJmpIndirect</code><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowJmpIndirect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowJmpIndirect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#Pandemic.Util.ASMFlow.FlowType" title="Pandemic.Util.ASMFlow.FlowType"><code class="xref py py-class docutils literal"><span class="pre">Pandemic.Util.ASMFlow.FlowType</span></code></a></p>
+<p>The destinations of indirect jumps are unknown.</p>
+<dl class="method">
+<dt id="Pandemic.Util.ASMFlow.FlowJmpIndirect.get_successors">
+<code class="descname">get_successors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowJmpIndirect.get_successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowJmpIndirect.get_successors" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Pandemic.Util.ASMFlow.FlowJmpUnconditional">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.ASMFlow.</code><code class="descname">FlowJmpUnconditional</code><span class="sig-paren">(</span><em>target</em>, <em>retaddr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowJmpUnconditional"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowJmpUnconditional" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#Pandemic.Util.ASMFlow.FlowType" title="Pandemic.Util.ASMFlow.FlowType"><code class="xref py py-class docutils literal"><span class="pre">Pandemic.Util.ASMFlow.FlowType</span></code></a></p>
+<p>Unconditional direct jumps only target one address.</p>
+<dl class="method">
+<dt id="Pandemic.Util.ASMFlow.FlowJmpUnconditional.get_successors">
+<code class="descname">get_successors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowJmpUnconditional.get_successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowJmpUnconditional.get_successors" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Pandemic.Util.ASMFlow.FlowOrdinary">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.ASMFlow.</code><code class="descname">FlowOrdinary</code><span class="sig-paren">(</span><em>passthrough</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowOrdinary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowOrdinary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#Pandemic.Util.ASMFlow.FlowType" title="Pandemic.Util.ASMFlow.FlowType"><code class="xref py py-class docutils literal"><span class="pre">Pandemic.Util.ASMFlow.FlowType</span></code></a></p>
+<p>Used for most instructions, which only pass execution to the next 
+instruction.</p>
+<dl class="method">
+<dt id="Pandemic.Util.ASMFlow.FlowOrdinary.get_successors">
+<code class="descname">get_successors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowOrdinary.get_successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowOrdinary.get_successors" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Pandemic.Util.ASMFlow.FlowReturn">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.ASMFlow.</code><code class="descname">FlowReturn</code><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowReturn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowReturn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#Pandemic.Util.ASMFlow.FlowType" title="Pandemic.Util.ASMFlow.FlowType"><code class="xref py py-class docutils literal"><span class="pre">Pandemic.Util.ASMFlow.FlowType</span></code></a></p>
+<p>Return statements are considered to have no outgoing references.</p>
+<dl class="method">
+<dt id="Pandemic.Util.ASMFlow.FlowReturn.get_successors">
+<code class="descname">get_successors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowReturn.get_successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowReturn.get_successors" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Pandemic.Util.ASMFlow.FlowType">
+<em class="property">class </em><code class="descclassname">Pandemic.Util.ASMFlow.</code><code class="descname">FlowType</code><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowType"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="Pandemic.Util.ASMFlow.FlowType.get_successors">
+<code class="descname">get_successors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/Pandemic/Util/ASMFlow.html#FlowType.get_successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Pandemic.Util.ASMFlow.FlowType.get_successors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the addresses of all possible following instructions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">( integer list, integer list )</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A pair of lists:  those addresses referenced by jumps or normal
+execution, and those addresses that are the targets of call instructions.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-Pandemic.Util">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-Pandemic.Util" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Pandemic.Util package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-Pandemic.Util.Enumerate">Pandemic.Util.Enumerate module</a></li>
+<li><a class="reference internal" href="#module-Pandemic.Util.Guarded">Pandemic.Util.Guarded module</a></li>
+<li><a class="reference internal" href="#module-Pandemic.Util.HashFunctions">Pandemic.Util.HashFunctions module</a></li>
+<li><a class="reference internal" href="#module-Pandemic.Util.Visitor">Pandemic.Util.Visitor module</a></li>
+<li><a class="reference internal" href="#module-Pandemic.Util.ASMFlow">Pandemic.Util.ASMFlow module</a></li>
+<li><a class="reference internal" href="#module-Pandemic.Util">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Pandemic.html"
+                        title="previous chapter">Pandemic package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Pandemic.X86.html"
+                        title="next chapter">Pandemic.X86 package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Pandemic.Util.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Pandemic.X86.html" title="Pandemic.X86 package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Pandemic.html" title="Pandemic package"
+             >previous</a> |</li>
+        <li><a href="index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="Pandemic.html" >Pandemic package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

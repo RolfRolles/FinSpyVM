@@ -1,0 +1,21 @@
+.text:004040F1     mov     edi, [ebx+VMContext.pScratch]  ; EDI := dynamically generated code stack
+.text:004040BF     mov     eax, [ebx+VMContext.SavedESP1] ; EAX := Saved ESP                       
+.text:004040DD     and     eax, 2Fh                                                                
+.text:00404110     add     edi, eax                       ; Add a "random" amount < 0x30 to EDI    
+.text:0040412E     push    edi                                                                     
+.text:00404119     mov     word ptr [edi], 6ACh           ; Stupid obfuscation                     
+.text:0040408F     xor     word ptr [edi], 6731h          ; In total, write 9C 61 (popf/popa)      
+.text:00404139     add     edi, 2
+.text:004040B1     lea     esi, [ebx+VMContext.CurrentInsn.InsnData]
+.text:00404086     movzx   ecx, byte ptr [ebx+VMContext.CurrentInsn.DataLength]
+.text:004040A2     rep movsb                              ; Copy the x86 machine code from Instruction->Data
+.text:0040414F     mov     byte ptr [edi], 0E9h           ; More stupid obfuscation                         
+.text:00404165     xor     byte ptr [edi], 81h            ; Write 68 (push dword...)                        
+.text:0040405E     mov     eax, [ebx+VMContext.fpVMEntry] ; EAX := Ordinary VM re-entry                     
+.text:004040CA     mov     [edi+1], eax                   ; Complete x86 instruction: push fpVMEntry        
+.text:00404068     mov     byte ptr [edi+5], 6Ch                                                            
+.text:004040D3     xor     byte ptr [edi+5], 0AFh         ; Write C3 (retn)                                 
+.text:004040E5     add     dword ptr [ebx+VMContext.pCurrInsn], size VMInstruction ; Proceed to next instruction
+.text:0040415B     pop     eax                            ; EAX := start of where we just wrote x86 machine code
+.text:004040FD     mov     esp, [ebx+VMContext.SavedESP1] ; Restore host ESP                                    
+.text:00404071     jmp     eax                            ; Branch to the code we just generated                

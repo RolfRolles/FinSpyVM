@@ -1,0 +1,15 @@
+.text:004043C2     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData] ; ECX := &Instruction->Data[0]
+.text:00404375     mov     eax, [ebx+VMContext.SavedESP1]            ; EAX := Saved ESP
+.text:00404369     mov     eax, [eax]                                ; EAX := Saved EFLAGS
+.text:004043CB     test    eax, 800h               
+.text:004043B4     setnz   dl                                        ; Test OF
+.text:004043A5     test    eax, 80h
+.text:0040435D     setnz   al                                        ; Test SF
+.text:00404383     cmp     al, dl                                    ; Is OF == SF?
+.text:00404398     jz      short near ptr unk_4043DB                 ; Jump if OF == SF
+
+; JZ path
+	.text:004043DB     jmp     [ebx+VMContext.fpVMRelativeJump]        ; Conditional true
+
+; JNZ path
+	.text:0040438A     jmp     [ebx+VMContext.fpVMNext]                ; Conditional false

@@ -1,0 +1,544 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.X86.X86ModRM &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Pandemic.X86.X86ModRM</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Classes for representing :class:`ModRM16` and :class:`ModRM32` memory</span>
+<span class="sd">expressions.  Also contains functionality to decode a ModRM expression, given</span>
+<span class="sd">a stream of bytes (as in :class:`.X86ByteStream.StreamObj`), and to produce an</span>
+<span class="sd">encoded ModRM expression given the constituent parts of a memory expression.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">X86MetaData</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">X86</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">X86ByteStream</span> <span class="kn">import</span> <span class="n">StreamObj</span>
+<span class="kn">from</span> <span class="nn">Pandemic.Util.ExerciseError</span> <span class="kn">import</span> <span class="n">ExerciseError</span>
+
+<div class="viewcode-block" id="sign_extend_8_16"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.sign_extend_8_16">[docs]</a><span class="k">def</span> <span class="nf">sign_extend_8_16</span><span class="p">(</span><span class="n">b8</span><span class="p">):</span> 
+	<span class="sd">&quot;&quot;&quot;Sign-extend an 8-bit integer to a 16-bit one.&quot;&quot;&quot;</span>
+	<span class="k">return</span> <span class="n">b8</span> <span class="k">if</span> <span class="n">b8</span> <span class="o">&amp;</span> <span class="mh">0x80</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">b8</span> <span class="o">|</span> <span class="mh">0xFF00</span></div>
+<div class="viewcode-block" id="sign_extend_8_32"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.sign_extend_8_32">[docs]</a><span class="k">def</span> <span class="nf">sign_extend_8_32</span><span class="p">(</span><span class="n">b8</span><span class="p">):</span> 
+	<span class="sd">&quot;&quot;&quot;Sign-extend an 8-bit integer to a 32-bit one.&quot;&quot;&quot;</span>
+	<span class="k">return</span> <span class="n">b8</span> <span class="k">if</span> <span class="n">b8</span> <span class="o">&amp;</span> <span class="mh">0x80</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">b8</span> <span class="o">|</span> <span class="mh">0xFFFFFF00</span></div>
+<div class="viewcode-block" id="little_endian_bytes"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.little_endian_bytes">[docs]</a><span class="k">def</span> <span class="nf">little_endian_bytes</span><span class="p">(</span><span class="n">imm</span><span class="p">,</span><span class="n">n</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Return a list of *n* 8-bit integers from the bytes of *imm*&quot;&quot;&quot;</span>
+	<span class="k">return</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">imm</span> <span class="o">&gt;&gt;</span> <span class="n">i</span><span class="o">*</span><span class="mi">8</span> <span class="o">&amp;</span> <span class="mh">0xFF</span><span class="p">,</span><span class="nb">xrange</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+
+<span class="c">#: The register values specified by the :attr:`~.RM` field of a </span>
+<span class="c">#: :class:`~.ModRM16` object.</span></div>
+<span class="n">modrm_16</span> <span class="o">=</span> <span class="p">[(</span><span class="n">Bx</span><span class="p">,</span><span class="n">Si</span><span class="p">),(</span><span class="n">Bx</span><span class="p">,</span><span class="n">Di</span><span class="p">),(</span><span class="n">Bp</span><span class="p">,</span><span class="n">Si</span><span class="p">),(</span><span class="n">Bp</span><span class="p">,</span><span class="n">Di</span><span class="p">),(</span><span class="n">Si</span><span class="p">,</span><span class="bp">None</span><span class="p">),(</span><span class="n">Di</span><span class="p">,</span><span class="bp">None</span><span class="p">),(</span><span class="n">Bp</span><span class="p">,</span><span class="bp">None</span><span class="p">),(</span><span class="n">Bx</span><span class="p">,</span><span class="bp">None</span><span class="p">)]</span>
+
+<div class="viewcode-block" id="ModRM16"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM16">[docs]</a><span class="k">class</span> <span class="nc">ModRM16</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Describes a ModRM/16 object.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ModRM16.init"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM16.init">[docs]</a>	<span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">mask</span><span class="p">,</span><span class="n">mod</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">ggg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">rm</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">disp</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">dispsize</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_mod</span>      <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_ggg</span>      <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">ggg</span><span class="p">,</span><span class="mi">7</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_rm</span>       <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">rm</span> <span class="p">,</span><span class="mi">7</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_disp</span>     <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">disp</span><span class="p">,</span><span class="n">mask</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_dispsize</span> <span class="o">=</span> <span class="n">dispsize</span>
+	</div>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">mod</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">ggg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">rm</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">disp</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">dispsize</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="mh">0xFFFF</span><span class="p">,</span><span class="n">mod</span><span class="p">,</span><span class="n">ggg</span><span class="p">,</span><span class="n">rm</span><span class="p">,</span><span class="n">disp</span><span class="p">,</span><span class="n">dispsize</span><span class="p">)</span>
+	
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">MOD</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;The ModRM&#39;s top 2 bits.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mod</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@MOD.setter</span>
+	<span class="k">def</span> <span class="nf">MOD</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_mod</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">val</span>
+	
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">GGG</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;The ModRM&#39;s middle 3 bits.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ggg</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@GGG.setter</span>
+	<span class="k">def</span> <span class="nf">GGG</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_ggg</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">val</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">RM</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;The ModRM&#39;s low 3 bits.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rm</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@RM.setter</span>
+	<span class="k">def</span> <span class="nf">RM</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_rm</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">val</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">Disp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;The ModRM memory expression&#39;s displacement, an integer.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_disp</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@Disp.setter</span>
+	<span class="k">def</span> <span class="nf">Disp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_disp</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">val</span>
+	
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">DispSize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;The ModRM memory expression&#39;s displacement size in bytes (0, 1, or 2 </span>
+<span class="sd">		for :class:`ModRM16`; 0, 1, or 4 for :class:`ModRM32`).&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dispsize</span>
+	<span class="nd">@DispSize.setter</span>
+	<span class="k">def</span> <span class="nf">DispSize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_dispsize</span> <span class="o">=</span> <span class="n">val</span>
+	
+<div class="viewcode-block" id="ModRM16.Decode"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM16.Decode">[docs]</a>	<span class="k">def</span> <span class="nf">Decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">stream</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Pull the fields of the ModR/M-16 apart, and consume a displacement if </span>
+<span class="sd">		specified.  Set the internal state of the object accordingly.  This is the</span>
+<span class="sd">		&quot;preliminary&quot; decoding phase, after which the *stream* object is no longer</span>
+<span class="sd">		necessary.  To actually obtain the parts of the memory expression specified</span>
+<span class="sd">		by the ModRM, call :meth:`.Interpret`.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.X86ByteStream` stream: byte stream from which to consume bytes</span>
+<span class="sd">		:raises: :exc:`~.X86.InvalidInstruction` if *stream* consumed 16 or more bytes</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="c"># Decode ModR/M 16 byte</span>
+		<span class="n">b</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">Byte</span><span class="p">()</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">MOD</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">GGG</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">RM</span> <span class="o">=</span> <span class="n">b</span><span class="o">&gt;&gt;</span><span class="mi">6</span><span class="o">&amp;</span><span class="mi">3</span><span class="p">,</span><span class="n">b</span><span class="o">&gt;&gt;</span><span class="mi">3</span><span class="o">&amp;</span><span class="mi">7</span><span class="p">,</span><span class="n">b</span><span class="o">&amp;</span><span class="mi">7</span>
+		
+		<span class="c"># The size of the displacement is generally specified by the mod.</span>
+		<span class="n">Disp</span><span class="p">,</span><span class="n">immsize</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">MOD</span>
+		
+		<span class="c"># This special case specifies an address only, with no registers.</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">MOD</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">RM</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span> <span class="n">immsize</span> <span class="o">=</span> <span class="mi">2</span>		
+		
+		<span class="c"># Decode the immediate, if one was specified.</span>
+		<span class="k">if</span> <span class="n">immsize</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="n">Disp</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">Word</span><span class="p">()</span> 
+		<span class="k">if</span> <span class="n">immsize</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">Disp</span> <span class="o">=</span> <span class="n">sign_extend_8_16</span><span class="p">(</span><span class="n">stream</span><span class="o">.</span><span class="n">Byte</span><span class="p">())</span>
+		
+		<span class="c"># Store the information about the displacement.</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">Disp</span>     <span class="o">=</span> <span class="n">Disp</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">DispSize</span> <span class="o">=</span> <span class="n">immsize</span>
+	</div>
+<div class="viewcode-block" id="ModRM16.Interpret"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM16.Interpret">[docs]</a>	<span class="k">def</span> <span class="nf">Interpret</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For a :class:`.ModRM16` object whose :attr:`.MOD` field is not ``3`` </span>
+<span class="sd">		(i.e., the :class:`.ModRM16` object specifies a memory location and not a </span>
+<span class="sd">		register), examine the fields of the object and return a 4-tuple describing</span>
+<span class="sd">		the 16-bit memory expression.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: (:class:`~.R16Elt`, :class:`~.R16Elt`, integer, integer)</span>
+<span class="sd">		:returns: A 4-tuple containing a base register, index register, integer</span>
+<span class="sd">			displacement, and displacement size in bytes.  The register components</span>
+<span class="sd">			may be ``None``; the displacement may be ``0`` or ``None``.</span>
+<span class="sd">		:raises: assertion failure if :attr:`MOD` is ``3``.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		
+		<span class="c"># We&#39;re interpreting memory expressions here, not registers.</span>
+		<span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MOD</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">)</span>
+	
+		<span class="c"># Return a 4-tuple:  (basereg,indexreg,disp,dispsize)</span>
+		<span class="c"># m.Disp and m.DispSize will be set identically for any case, so we pull </span>
+		<span class="c"># that logic out into this helper function.</span>
+		<span class="k">def</span> <span class="nf">ModRM16WithDisp</span><span class="p">(</span><span class="n">basereg</span><span class="p">,</span><span class="n">indexreg</span><span class="p">):</span>
+			<span class="k">return</span> <span class="p">(</span><span class="n">basereg</span><span class="p">,</span><span class="n">indexreg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">DispSize</span><span class="p">)</span>
+	
+		<span class="c"># Handle the special case of an offset specified directly, i.e., with no</span>
+		<span class="c"># base or index register.</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">MOD</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">RM</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span> 
+			<span class="c"># Hint: call ModRM16WithDisp.  What should the parameters be?</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM16::Interpret: Offset-only special case&quot;</span><span class="p">)</span>
+		
+		<span class="c"># Otherwise, the base and index registers are specified by m.RM.</span>
+	
+		<span class="c"># Hint: ultimately, you will return the result of calling ModRM16WithDisp.</span>
+		<span class="c"># You will need to use the proper registers as specified by m.RM.</span>
+		<span class="c"># Take a look at the declaration of the data item named modrm_16.</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM16::Interpret: General case&quot;</span><span class="p">)</span>
+	
+	<span class="c"># This function is here to allow us to encode SIB bytes in the 32-bit case</span>
+	<span class="c"># (that class is derived from this one).</span></div>
+<div class="viewcode-block" id="ModRM16.EncodeAdditional"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM16.EncodeAdditional">[docs]</a>	<span class="k">def</span> <span class="nf">EncodeAdditional</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">b</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Encode something between the ModRM and displacement.  Not used in the</span>
+<span class="sd">		:class:`ModRM16` class, but overridden in the :class:`ModRM32` class.</span>
+<span class="sd">		</span>
+<span class="sd">		:param b: ModRM byte as a list</span>
+<span class="sd">		:type b: integer list</span>
+<span class="sd">		:rtype: integer list</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="n">b</span>
+	
+	<span class="c"># Glue the bitfields together and append a displacement if necessary.</span></div>
+<div class="viewcode-block" id="ModRM16.Encode"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM16.Encode">[docs]</a>	<span class="k">def</span> <span class="nf">Encode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Concatenate the fields :attr:`MOD`, :attr:`GGG`, and :attr:`RM` together</span>
+<span class="sd">		to form the ModRM-16 byte.  If a displacement is present, turn it into</span>
+<span class="sd">		a list of little-endian bytes.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: integer list</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">b</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">MOD</span> <span class="o">&lt;&lt;</span> <span class="mi">6</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">GGG</span> <span class="o">&lt;&lt;</span> <span class="mi">3</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">RM</span><span class="p">]</span>
+		<span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">EncodeAdditional</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Disp</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="n">b</span>
+		<span class="k">return</span> <span class="n">b</span> <span class="o">+</span> <span class="n">little_endian_bytes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">DispSize</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ModRM16.EncodeFromParts"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM16.EncodeFromParts">[docs]</a>	<span class="k">def</span> <span class="nf">EncodeFromParts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">BaseReg</span><span class="p">,</span><span class="n">IndexReg</span><span class="p">,</span><span class="n">Disp</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Given base and index registers, and an integer displacement, set the</span>
+<span class="sd">		internal state to the corresponding integer values.  We must interpret the</span>
+<span class="sd">		arguments and determine which special cases apply, if any.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.R16Elt` BaseReg: base register (or ``None``)</span>
+<span class="sd">		:param `.R16Elt` IndexReg: index register (or ``None``)</span>
+<span class="sd">		:param integer Disp: displacement (may be ``0`` or ``None``)</span>
+<span class="sd">		:raises Exception: if *BaseReg* and *IndexReg* are an illegal register pair</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="c"># Helper function:  set the MOD and displacement information.</span>
+		<span class="k">def</span> <span class="nf">SetModDisp</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span><span class="n">disp</span><span class="p">,</span><span class="n">dispsize</span><span class="p">):</span> 
+			<span class="bp">self</span><span class="o">.</span><span class="n">MOD</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">DispSize</span><span class="o">=</span><span class="n">mod</span><span class="p">,</span><span class="n">disp</span><span class="p">,</span><span class="n">dispsize</span>
+		
+		<span class="c"># Is it the case where only an offset is specified?  If so, set MOD=0,RM=6,</span>
+		<span class="c"># and the displacement Disp with size 2.  Then, return.</span>
+		<span class="k">if</span> <span class="n">BaseReg</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">IndexReg</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM16::EncodeFromParts: Displacement only&quot;</span><span class="p">)</span>
+		
+		<span class="n">had_Disp</span> <span class="o">=</span> <span class="bp">False</span>
+		<span class="c"># A displacement was not specified.  Set MOD to 0.  We may change it later</span>
+		<span class="c"># for [Bp], whose encoding mandates a displacement.</span>
+		<span class="k">if</span> <span class="n">Disp</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">Disp</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM16::EncodeFromParts: No displacement&quot;</span><span class="p">)</span>
+			
+		<span class="c"># A displacement was specified, so set the displacement information.</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">had_Disp</span> <span class="o">=</span> <span class="bp">True</span>
+			<span class="c"># Check if the displacement can be encoded in 8 bits.  Set the MOD and</span>
+			<span class="c"># displacement information.</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM16::EncodeFromParts: Displacement&quot;</span><span class="p">)</span>
+		
+		<span class="c"># A base register of Bp requires a displacement.  If no displacement has</span>
+		<span class="c"># already been specified, set the MOD and displacement information for a</span>
+		<span class="c"># 1-byte displacement 0.</span>
+		<span class="k">if</span> <span class="n">BaseReg</span> <span class="o">==</span> <span class="n">Bp</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">had_Disp</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM16::EncodeFromParts: Bp, no displacement&quot;</span><span class="p">)</span>
+		
+		<span class="c"># Set self.RM to the position of the base/index register pair within the list </span>
+		<span class="c"># modrm_16.  This will throw an exception if the register combination is</span>
+		<span class="c"># invalid.</span>
+		<span class="k">try</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM16::EncodeFromParts: Set RM&quot;</span><span class="p">)</span>
+		<span class="k">except</span> <span class="n">e</span><span class="p">:</span>
+			<span class="k">print</span> <span class="s">&quot;Invalid ModRM/16 register pair&quot;</span>
+			<span class="k">raise</span> <span class="ne">IndexError</span>
+
+	</div></div>
+<div class="viewcode-block" id="SIBBase"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.SIBBase">[docs]</a><span class="k">class</span> <span class="nc">SIBBase</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;This class is only meaningful for 32-bit memory expressions encoded via </span>
+<span class="sd">	ModRM, and only if a SIB (Scale-Index-Base) byte is required.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="SIBBase.init"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.SIBBase.init">[docs]</a>	<span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ss</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">idx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">base</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">disp</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_ss</span>   <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">ss</span>  <span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_idx</span>  <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">idx</span> <span class="p">,</span><span class="mi">7</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_base</span> <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">base</span><span class="p">,</span><span class="mi">7</span><span class="p">)</span>
+	</div>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ss_</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">idx_</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">base_</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">ss_</span><span class="p">,</span><span class="n">idx_</span><span class="p">,</span><span class="n">base_</span><span class="p">)</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">SCALE</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;The top two bits of a SIB are the scale factor.</span>
+<span class="sd">		* 0: 1</span>
+<span class="sd">		* 1: 2</span>
+<span class="sd">		* 2: 4</span>
+<span class="sd">		* 3: 8&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ss</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@SCALE.setter</span>
+	<span class="k">def</span> <span class="nf">SCALE</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_ss</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">val</span>
+	
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">INDEX</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;The middle three bits of a SIB are the index register.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_idx</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@INDEX.setter</span>
+	<span class="k">def</span> <span class="nf">INDEX</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_idx</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">val</span>
+
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">BASE</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;The middle three bits of a SIB are the base register.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@BASE.setter</span>
+	<span class="k">def</span> <span class="nf">BASE</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">val</span>
+
+<div class="viewcode-block" id="SIBBase.Encode"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.SIBBase.Encode">[docs]</a>	<span class="k">def</span> <span class="nf">Encode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Concatenate the fields :attr:`SCALE`, :attr:`INDEX`, and :attr:`BASE` </span>
+<span class="sd">		together to form the ModRM-16 byte.  If a displacement is present, turn it</span>
+<span class="sd">		into a list of little-endian bytes.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: integer list</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">SCALE</span> <span class="o">&lt;&lt;</span> <span class="mi">6</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">INDEX</span> <span class="o">&lt;&lt;</span> <span class="mi">3</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">BASE</span><span class="p">]</span>
+</div></div>
+<div class="viewcode-block" id="ModRM32"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM32">[docs]</a><span class="k">class</span> <span class="nc">ModRM32</span><span class="p">(</span><span class="n">ModRM16</span><span class="p">):</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">mod</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">ggg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">rm</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">sf</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">idx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">base</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">disp</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">dispsize</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="mh">0xFFFFFFFF</span><span class="p">,</span><span class="n">mod</span><span class="p">,</span><span class="n">ggg</span><span class="p">,</span><span class="n">rm</span><span class="p">,</span><span class="n">disp</span><span class="p">,</span><span class="n">dispsize</span><span class="p">)</span>
+		
+		<span class="k">if</span> <span class="p">(</span><span class="n">sf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">base</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">):</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">_sib</span> <span class="o">=</span> <span class="n">SIBBase</span><span class="p">(</span><span class="n">sf</span><span class="p">,</span><span class="n">idx</span><span class="p">,</span><span class="n">base</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">_sib</span> <span class="o">=</span> <span class="bp">None</span>
+	
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">SIB</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;An optional Scale-Index-Byte (SIB) :class:`SIBBase` object.&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sib</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">_sib</span> <span class="o">=</span> <span class="n">SIBBase</span><span class="p">()</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sib</span>
+	<span class="nd">@SIB.setter</span>
+	<span class="k">def</span> <span class="nf">SIB</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_sib</span> <span class="o">=</span> <span class="n">val</span>
+
+<div class="viewcode-block" id="ModRM32.EncodeAdditional"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM32.EncodeAdditional">[docs]</a>	<span class="k">def</span> <span class="nf">EncodeAdditional</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">b</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;If a :class:`SIBBase` SIB was required, append its encoding to the</span>
+<span class="sd">		parameter *b*.  Otherwise, return *b* as-is.</span>
+<span class="sd">		</span>
+<span class="sd">		:param b: ModRM byte as a list</span>
+<span class="sd">		:type b: integer list</span>
+<span class="sd">		:rtype: integer list</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="n">b</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sib</span> <span class="o">==</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">b</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">SIB</span><span class="o">.</span><span class="n">Encode</span><span class="p">()</span>
+	</div>
+<div class="viewcode-block" id="ModRM32.Decode"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM32.Decode">[docs]</a>	<span class="k">def</span> <span class="nf">Decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">stream</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Pull the fields of the ModR/M-32 apart, and consume a displacement if </span>
+<span class="sd">		specified.  Set the internal state of the object accordingly.  This is the</span>
+<span class="sd">		&quot;preliminary&quot; decoding phase, after which the *stream* object is no longer</span>
+<span class="sd">		necessary.  To actually obtain the parts of the memory expression specified</span>
+<span class="sd">		by the ModRM, call :meth:`.Interpret`.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.X86ByteStream` stream: byte stream from which to consume bytes</span>
+<span class="sd">		:raises: :exc:`~.X86.InvalidInstruction` if *stream* consumed 16 or more bytes</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="c"># Optional parts set to None</span>
+		<span class="n">ss</span><span class="p">,</span><span class="n">idx</span><span class="p">,</span><span class="n">base</span><span class="p">,</span><span class="n">disp</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span><span class="bp">None</span><span class="p">,</span><span class="bp">None</span><span class="p">,</span><span class="bp">None</span>
+		
+		<span class="c"># Decode ModR/M 32 byte</span>
+		<span class="n">b</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">Byte</span><span class="p">()</span>
+		<span class="n">mod</span><span class="p">,</span><span class="n">ggg</span><span class="p">,</span><span class="n">rm</span> <span class="o">=</span> <span class="n">b</span><span class="o">&gt;&gt;</span><span class="mi">6</span><span class="o">&amp;</span><span class="mi">3</span><span class="p">,</span><span class="n">b</span><span class="o">&gt;&gt;</span><span class="mi">3</span><span class="o">&amp;</span><span class="mi">7</span><span class="p">,</span><span class="n">b</span><span class="o">&amp;</span><span class="mi">7</span>
+		
+		<span class="c"># Default immediate size in bytes; special cases can change it.</span>
+		<span class="n">immsize</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">mod</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">mod</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">4</span> <span class="k">if</span> <span class="n">mod</span> <span class="o">==</span> <span class="mi">2</span> <span class="k">else</span> <span class="mi">0</span>
+		
+		<span class="c"># Special case:  no register is used; only a DWORD displacement.</span>
+		<span class="k">if</span> <span class="n">mod</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">rm</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span> <span class="n">immsize</span> <span class="o">=</span> <span class="mi">4</span>
+		
+		<span class="c"># SIB is present:</span>
+		<span class="k">if</span> <span class="n">mod</span> <span class="o">!=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">rm</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+			
+			<span class="c"># Decode SIB byte</span>
+			<span class="n">b</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">Byte</span><span class="p">()</span>
+			<span class="n">ss</span><span class="p">,</span><span class="n">idx</span><span class="p">,</span><span class="n">base</span> <span class="o">=</span> <span class="n">b</span><span class="o">&gt;&gt;</span><span class="mi">6</span><span class="o">&amp;</span><span class="mi">3</span><span class="p">,</span><span class="n">b</span><span class="o">&gt;&gt;</span><span class="mi">3</span><span class="o">&amp;</span><span class="mi">7</span><span class="p">,</span><span class="n">b</span><span class="o">&amp;</span><span class="mi">7</span>
+			
+			<span class="c"># Special case:  mod == 0 and base == EBP -&gt; [idx*ss+dword]</span>
+			<span class="k">if</span> <span class="n">mod</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">base</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span> <span class="n">immsize</span> <span class="o">=</span> <span class="mi">4</span>
+		
+		<span class="c"># Decode any immediates that were specified</span>
+		<span class="k">if</span> <span class="n">immsize</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">disp</span> <span class="o">=</span> <span class="n">sign_extend_8_32</span><span class="p">(</span><span class="n">stream</span><span class="o">.</span><span class="n">Byte</span><span class="p">())</span>
+		<span class="k">if</span> <span class="n">immsize</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span> <span class="n">disp</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">Dword</span><span class="p">()</span>
+		
+		<span class="c"># Set the parts within the ModRM32 object self</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">MOD</span>      <span class="o">=</span> <span class="n">mod</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">GGG</span>      <span class="o">=</span> <span class="n">ggg</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">RM</span>       <span class="o">=</span> <span class="n">rm</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">Disp</span>     <span class="o">=</span> <span class="n">disp</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">DispSize</span> <span class="o">=</span> <span class="n">immsize</span>
+		<span class="k">if</span> <span class="n">ss</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">SIB</span><span class="o">.</span><span class="n">SCALE</span> <span class="o">=</span> <span class="n">ss</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">SIB</span><span class="o">.</span><span class="n">INDEX</span> <span class="o">=</span> <span class="n">idx</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">SIB</span><span class="o">.</span><span class="n">BASE</span>  <span class="o">=</span> <span class="n">base</span>
+		</div>
+<div class="viewcode-block" id="ModRM32.Interpret"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM32.Interpret">[docs]</a>	<span class="k">def</span> <span class="nf">Interpret</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For a :class:`.ModRM32` object whose :attr:`.MOD` field is not 3 (i.e.,</span>
+<span class="sd">		the :class:`.ModRM32` object specifies a memory location and not a </span>
+<span class="sd">		register), examine the fields of the object and return a 5-tuple describing</span>
+<span class="sd">		the 32-bit memory expression.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: (:class:`~.R32Elt`, :class:`~.R32Elt`,integer,integer,integer)</span>
+<span class="sd">		:returns: A 5-tuple containing a base register, index register, scale </span>
+<span class="sd">			factor, integer displacement, and displacement size in bytes. The </span>
+<span class="sd">			register components may be ``None``; the displacement may be ``None``.</span>
+<span class="sd">		:raises: assertion failure if :attr:`MOD` is ``3``.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="c"># We&#39;re interpreting memory expressions here, not registers.</span>
+		<span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MOD</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">)</span>
+  	
+		<span class="c"># Adjust a 32-bit register from a number [0,7] to a 32-bit register enum.</span>
+		<span class="k">def</span> <span class="nf">AdjustReg32</span><span class="p">(</span><span class="n">n</span><span class="p">):</span> <span class="k">return</span> <span class="n">R32Elt</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+		
+		<span class="c"># Return a 5-tuple:  (basereg,indexreg,scalefac,disp,dispsize)</span>
+		<span class="c"># self.Disp and self.DispSize will be set identically for any case, so </span>
+		<span class="c"># we pull that logic out into this helper function.</span>
+		<span class="k">def</span> <span class="nf">ModRM32WithDisp</span><span class="p">(</span><span class="n">basereg</span><span class="p">,</span><span class="n">indexreg</span><span class="p">,</span><span class="n">scalefac</span><span class="p">):</span>
+			<span class="k">return</span> <span class="p">(</span><span class="n">basereg</span><span class="p">,</span><span class="n">indexreg</span><span class="p">,</span><span class="n">scalefac</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">DispSize</span><span class="p">)</span>
+  	
+		<span class="c"># Is it the case that the expression is just a DWORD?</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">MOD</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">RM</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span> 
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::Interpret: Displacement only&quot;</span><span class="p">)</span>
+		
+		<span class="c"># Check to see if a SIB is specified.  If not, no index register is used.</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">RM</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span> 
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::Interpret: No SIB&quot;</span><span class="p">)</span>
+		
+		<span class="c"># Set IndexReg and ScaleFac to empty at first.</span>
+		<span class="n">IndexReg</span><span class="p">,</span><span class="n">ScaleFac</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span><span class="mi">0</span>
+		
+		<span class="c"># Is it the case that an index register is present (i.e., SIB.IDX is not </span>
+		<span class="c"># ESP)?  If so, set IndexReg with the adjusted register and set ScaleFac</span>
+		<span class="c"># to the SIB&#39;s SS field.</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">SIB</span><span class="o">.</span><span class="n">INDEX</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::Interpret: Index/Scale&quot;</span><span class="p">)</span>
+		
+		<span class="c"># Is it the case where MOD == 0 and BASE == 5?  In this case, there is no </span>
+		<span class="c"># base register.  Call ModRM32WithDisp and return its value.</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">MOD</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">SIB</span><span class="o">.</span><span class="n">BASE</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::Interpret: No base register&quot;</span><span class="p">)</span>
+  	
+		<span class="c"># The full SIB case applies.  We had a base register (in SIB.SREG), an index</span>
+		<span class="c"># (in IndexReg) and scale factor (in ScaleFac).</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::Interpret: SIB general case&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ModRM32.EncodeFromParts"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ModRM.ModRM32.EncodeFromParts">[docs]</a>	<span class="k">def</span> <span class="nf">EncodeFromParts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">BaseReg</span><span class="p">,</span><span class="n">IndexReg</span><span class="p">,</span><span class="n">ScaleFac</span><span class="p">,</span><span class="n">Disp</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Given base and index registers, a scale factor, and an integer </span>
+<span class="sd">		displacement, set the internal state to the corresponding integer values.</span>
+<span class="sd">		We must interpret the arguments and determine which special cases apply, if</span>
+<span class="sd">		any.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.R32Elt` BaseReg: base register (or ``None``)</span>
+<span class="sd">		:param `.R32Elt` IndexReg: index register (or ``None``)</span>
+<span class="sd">		:param integer ScaleFac: scale factor (``0-3``)</span>
+<span class="sd">		:param integer Disp: displacement (may be ``0`` or ``None``)</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">def</span> <span class="nf">SetModDisp</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span><span class="n">disp</span><span class="p">,</span><span class="n">dispsize</span><span class="p">):</span> 
+			<span class="bp">self</span><span class="o">.</span><span class="n">MOD</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">DispSize</span><span class="o">=</span><span class="n">mod</span><span class="p">,</span><span class="n">disp</span><span class="p">,</span><span class="n">dispsize</span>
+		
+		<span class="c"># Is it the case where only an offset is specified?  If so, set MOD=0,RM=5,</span>
+		<span class="c"># and the displacement Disp with size 4, and return.</span>
+		<span class="k">if</span> <span class="n">BaseReg</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">IndexReg</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::EncodeFromParts: Displacement only&quot;</span><span class="p">)</span>
+		
+		<span class="n">had_Disp</span> <span class="o">=</span> <span class="bp">False</span>
+	
+		<span class="c"># A displacement was not specified.  Set MOD to 0.  We may need to change it</span>
+		<span class="c"># if some encoding mandates a displacement.</span>
+		<span class="k">if</span> <span class="n">Disp</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">Disp</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::EncodeFromParts: No displacement&quot;</span><span class="p">)</span>
+			
+		<span class="c"># A displacement was specified.</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">had_Disp</span> <span class="o">=</span> <span class="bp">True</span>
+			<span class="c"># Check if the displacement can be encoded in 8 bits.</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::EncodeFromParts: Displacement&quot;</span><span class="p">)</span>
+			
+		<span class="c"># Special case:  base register of EBP requires a displacement.  Create a byte</span>
+		<span class="c"># 0 if a displacement was not specified.</span>
+		<span class="k">if</span> <span class="n">BaseReg</span> <span class="o">==</span> <span class="n">Ebp</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">had_Disp</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::EncodeFromParts: EBP, no displacement&quot;</span><span class="p">)</span>
+	
+		<span class="c"># Was the index register not present (i.e., no SIB byte required)?</span>
+		<span class="k">if</span> <span class="n">IndexReg</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+			
+			<span class="c"># Special case:  a SIB byte is required if ESP is the base register.</span>
+			<span class="c"># Create a </span>
+			<span class="k">if</span> <span class="n">BaseReg</span> <span class="o">==</span> <span class="n">Esp</span><span class="p">:</span>
+				<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::EncodeFromParts: ESP base register&quot;</span><span class="p">)</span>
+	
+			<span class="c"># No special case:  put the register number into the RM field.</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::EncodeFromParts: Set RM&quot;</span><span class="p">)</span>
+			<span class="k">return</span>
+		
+		<span class="c"># From here on, we handle the SIB byte.</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">RM</span> <span class="o">=</span> <span class="n">Esp</span><span class="o">.</span><span class="n">IntValue</span><span class="p">()</span>
+	
+		<span class="c"># If there&#39;s no base register, we require a DWORD displacement and MOD=0.</span>
+		<span class="k">if</span> <span class="n">BaseReg</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::EncodeFromParts: No base register&quot;</span><span class="p">)</span>
+	
+		<span class="c"># Otherwise, store the base register index into the SREG field of the SIB.</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::EncodeFromParts: Base register&quot;</span><span class="p">)</span>
+	
+		<span class="c"># Set the ScaleFac and adjust IndexReg.</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;ModRM32::EncodeFromParts: Scale/Index&quot;</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

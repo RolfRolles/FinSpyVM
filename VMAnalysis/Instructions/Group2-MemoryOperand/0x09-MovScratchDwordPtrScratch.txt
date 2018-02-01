@@ -1,0 +1,7 @@
+.text:004037CA     mov     eax, [ebx+VMContext.dwScratch] ; EAX := scratch register
+.text:004037E6     mov     eax, [eax]                     ; EAX := dword ptr [scratch]
+.text:004037D3     mov     [ebx+VMContext.dwScratch], eax ; scratch := dword ptr [scratch]
+.text:004037DC     add     [ebx+VMContext.pCurrInsn], size VMInstruction ; Proceed to next instruction
+.text:004037F0     mov     eax, [ebx+VMContext.fpVMEntry] ; EAX := ordinary VM re-entry sequence
+.text:004037BC     mov     esp, [ebx+VMContext.SavedESP1] ; Restore host ESP
+.text:004037FD     jmp     [ebx+VMContext.fpVMReEntryToFuncPtr] ; Re-enter VM, state on stack

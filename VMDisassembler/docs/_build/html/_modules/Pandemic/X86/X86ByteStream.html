@@ -1,0 +1,171 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.X86.X86ByteStream &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Pandemic.X86.X86ByteStream</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Byte stream interface.  To support any form of input, derive a class from </span>
+<span class="sd">:class:`StreamObj` and override :meth:`GetByteInternal`.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">X86</span> <span class="kn">import</span> <span class="n">InvalidInstruction</span>
+
+<div class="viewcode-block" id="StreamObj"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ByteStream.StreamObj">[docs]</a><span class="k">class</span> <span class="nc">StreamObj</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Class for acquiring bytes from a source.&quot;&quot;&quot;</span>	
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">bytes</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">bytes</span> <span class="o">=</span> <span class="nb">bytes</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">Init</span><span class="p">()</span>
+	
+<div class="viewcode-block" id="StreamObj.Init"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ByteStream.StreamObj.Init">[docs]</a>	<span class="k">def</span> <span class="nf">Init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Initializes position variables.&quot;&quot;&quot;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">origpos</span> <span class="o">=</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="StreamObj.GetByteInternal"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ByteStream.StreamObj.GetByteInternal">[docs]</a>	<span class="k">def</span> <span class="nf">GetByteInternal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Consume a byte from the stream and return it.  This function shall be</span>
+<span class="sd">		the only one needed to override in derived classes, when changing the </span>
+<span class="sd">		source from which a byte is consumed.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: 8-bit integer</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">bytes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">]</span>
+	</div>
+<div class="viewcode-block" id="StreamObj.Byte"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ByteStream.StreamObj.Byte">[docs]</a>	<span class="k">def</span> <span class="nf">Byte</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Check to ensure that we have not consumed more than 16 bytes (for that</span>
+<span class="sd">		would signal an illegal instruction).  If not, invoke </span>
+<span class="sd">		:meth:`GetByteInternal` and return the result.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: 8-bit integer</span>
+<span class="sd">		:raises: :exc:`.InvalidInstruction` if more than 16 bytes have been </span>
+<span class="sd">			consumed since the last call to :meth:`SetPos`.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="c"># X86/32 instructions are at most 15 bytes in length</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">origpos</span> <span class="o">&gt;=</span> <span class="mi">16</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">InvalidInstruction</span><span class="p">()</span>
+		
+		<span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetByteInternal</span><span class="p">()</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">1</span>
+		<span class="k">return</span> <span class="n">b</span>
+</div>
+<div class="viewcode-block" id="StreamObj.Word"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ByteStream.StreamObj.Word">[docs]</a>	<span class="k">def</span> <span class="nf">Word</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Consume a word from the stream and return it.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: 16-bit integer</span>
+<span class="sd">		:raises: :exc:`.InvalidInstruction` if more than 16 bytes have been </span>
+<span class="sd">			consumed since the last call to :meth:`SetPos`.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">b0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Byte</span><span class="p">()</span>
+		<span class="n">b1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Byte</span><span class="p">()</span>
+		<span class="k">return</span> <span class="p">(</span><span class="n">b1</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">|</span> <span class="n">b0</span>
+</div>
+<div class="viewcode-block" id="StreamObj.Dword"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ByteStream.StreamObj.Dword">[docs]</a>	<span class="k">def</span> <span class="nf">Dword</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Consume a dword from the stream and return it.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: 32-bit integer</span>
+<span class="sd">		:raises: :exc:`.InvalidInstruction` if more than 16 bytes have been </span>
+<span class="sd">			consumed since the last call to :meth:`SetPos`.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">w0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Word</span><span class="p">()</span>
+		<span class="n">w1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Word</span><span class="p">()</span>
+		<span class="k">return</span> <span class="p">(</span><span class="n">w1</span> <span class="o">&lt;&lt;</span> <span class="mi">16</span><span class="p">)</span> <span class="o">|</span> <span class="n">w0</span>
+	</div>
+<div class="viewcode-block" id="StreamObj.Pos"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ByteStream.StreamObj.Pos">[docs]</a>	<span class="k">def</span> <span class="nf">Pos</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Return the current position of the stream.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: integer</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span>
+	</div>
+<div class="viewcode-block" id="StreamObj.SetPos"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86ByteStream.StreamObj.SetPos">[docs]</a>	<span class="k">def</span> <span class="nf">SetPos</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ea</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Set the current position of the stream to *ea*.</span>
+<span class="sd">		</span>
+<span class="sd">		:param integer ea:</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">origpos</span> <span class="o">=</span> <span class="n">ea</span><span class="p">,</span><span class="n">ea</span>
+		</div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

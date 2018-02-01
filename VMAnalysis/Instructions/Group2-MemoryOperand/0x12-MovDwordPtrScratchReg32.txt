@@ -1,0 +1,12 @@
+.text:00403B79     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData] ; ECX := &Instruction->Data[0]
+.text:00403BC8     movzx   ecx, byte ptr [ecx]                       ; ECX :=  Instruction->Data[0]
+.text:00403BA1     mov     eax, 7                      
+.text:00403B95     sub     eax, ecx                                  ; EAX := 7 - ECX
+.text:00403BD3     mov     ecx, [ebx+VMContext.SavedESP1]            ; ECX := Host ESP
+.text:00403BAD     mov     edx, [ecx+eax*4+4]                        ; EDX := saved register specified by Instruction->Data[0]
+.text:00403BEC     mov     ecx, [ebx+VMContext.dwScratch]            ; ECX := scratch register
+.text:00403BBB     mov     [ecx], edx                                ; Write saved register to scratch pointer
+.text:00403BDE     add     [ebx+VMContext.pCurrInsn], size VMInstruction ; Proceed to next instruction
+.text:00403B6F     mov     eax, [ebx+VMContext.fpVMEntry]            ; EAX := ordinary VM re-entry
+.text:00403B62     mov     esp, [ebx+VMContext.SavedESP1]            ; Restore host ESP
+.text:00403B87     jmp     [ebx+VMContext.fpVMReEntryToFuncPtr]      ; Re-enter VM, state on stack

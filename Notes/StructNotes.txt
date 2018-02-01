@@ -1,0 +1,17 @@
+Initialize per-thread structure:
+* field_0:  00401A98: pointer to keyed block within field_20 array
+* field_4:  00401AAD: pointer to last DWORD in this structure (0xFFFC offset)
+* field_8:  00403F7C: scratch data area
+* field_C:  004022A9: pointer to post-VM-setup entrypoint (pusha/pushf) (0x004020EA for this sample)
+* field_10: 00402389: pointer to VM "re-entry sequence" (takes eax = VM entry *) (0x00402B92 for this sample)
+* field_14: 004023B5: pointer to VM "re-entry sequence 2" (takes [esp+0x24] = VM keyed block *) (0x00402C6F)
+* field_18: 00402280: pointer to code to switch to another keyed block by displacement (0x00402B74)
+* field_1C: 00402375: pointer to code to jump to next keyed block (0x00402B68 for this sample)
+* field_20: 00401C6C: pointer to decompressed array of 0x18-byte structs (entrypoints?)
+* field_24: 004022CA: pointer to PIC base (0x00402131 for this sample)
+* field_28: 00401FA9: dwBaseAddress 
+* field_2C: 004024A2: saved ESP before VM entry
+* field_30: 004021F3: saved ESP before VM entry (2)
+* field_34: 0040243E: pointer to keyed block lookup function (0x00402593 for this sample)
+* field_38: 00402399: decrypted 0x18-byte struct
+* field_50: 00401998: initialized to address of field_54

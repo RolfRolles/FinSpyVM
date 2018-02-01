@@ -1,0 +1,500 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.X86.X86TypeChecker &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Pandemic.X86.X86TypeChecker</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;The type-checker for :mod:`~.X86 :class:`~.Operand` and </span>
+<span class="sd">:class:`~.Instruction` objects.  It is important for its own sake (to ensure </span>
+<span class="sd">that user-created :class:`~.Instruction` objects are valid within the X86 </span>
+<span class="sd">instruction set), as well as during encoding (to determine how the instruction</span>
+<span class="sd">should be encoded).  It supports three interfaces:</span>
+<span class="sd">	</span>
+<span class="sd">* :meth:`.check`, to check a single :class:`~.Operand` against a single :class:`~.AOTElt`;</span>
+<span class="sd">* :meth:`.TypeCheckInstruction_exn`, to check an instruction against a list of :class:`~.AOTElt` types and raise a :class:`X86TypeCheckError` on failure;</span>
+<span class="sd">* :meth:`.TypeCheckInstruction_opt`, to check an instruction against a list of :class:`~.AOTElt` types and return ``None`` on failure.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">X86</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">X86InternalOperand</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">X86InternalOperandDescriptions</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">X86EncodeTable</span>
+<span class="kn">from</span> <span class="nn">Pandemic.Util.Visitor</span> <span class="kn">import</span> <span class="n">Visitor2</span>
+<span class="kn">from</span> <span class="nn">Pandemic.Util.ExerciseError</span> <span class="kn">import</span> <span class="n">ExerciseError</span>
+
+<div class="viewcode-block" id="X86TypeCheckError"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeCheckError">[docs]</a><span class="k">class</span> <span class="nc">X86TypeCheckError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;This exception may be thrown during type-checking.  One interface method</span>
+<span class="sd">	allows exceptions to pass through; another catches them and returns `None`.</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">str</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">str</span> <span class="o">=</span> <span class="nb">str</span>
+	<span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">str</span>
+</div>
+<div class="viewcode-block" id="TypeCheckInfo"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.TypeCheckInfo">[docs]</a><span class="k">class</span> <span class="nc">TypeCheckInfo</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;This class holds information about the overrides required by an operand.</span>
+<span class="sd">	Any member may be `None`, in which case that particular override is not </span>
+<span class="sd">	meaningful for the operand.</span>
+<span class="sd">	</span>
+<span class="sd">	:ivar bool sizeo: operand size OPSIZE prefix required or not</span>
+<span class="sd">	:ivar bool addro: address size ADDRSIZE prefix required or not</span>
+<span class="sd">	:ivar `.SegElt` sego: a segment, if such a prefix is required</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">sizeo</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">addro</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">sego</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+		<span class="n">s</span><span class="o">.</span><span class="n">sizeo</span><span class="p">,</span><span class="n">s</span><span class="o">.</span><span class="n">addro</span><span class="p">,</span><span class="n">s</span><span class="o">.</span><span class="n">sego</span> <span class="o">=</span> <span class="n">sizeo</span><span class="p">,</span><span class="n">addro</span><span class="p">,</span><span class="n">sego</span>
+</div>
+<div class="viewcode-block" id="SizePFX"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.SizePFX">[docs]</a><span class="k">def</span> <span class="nf">SizePFX</span><span class="p">(</span><span class="n">b</span><span class="p">,</span><span class="n">t</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> 
+	<span class="sd">&quot;&quot;&quot;Either return a new :class:`.TypeCheckInfo` object with the *sizeo* field</span>
+<span class="sd">	set to *b* if *t* is `None`, or update *t* with that information.</span>
+<span class="sd">	</span>
+<span class="sd">	:ivar bool b: operand size prefix required</span>
+<span class="sd">	:ivar `.TypeCheckInfo` t: existing :class:`TypeCheckInfo` object or `None`</span>
+<span class="sd">	:rtype: .TypeCheckInfo</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="n">TypeCheckInfo</span><span class="p">(</span><span class="n">sizeo</span><span class="o">=</span><span class="n">b</span><span class="p">)</span>
+	<span class="n">t</span><span class="o">.</span><span class="n">sizeo</span> <span class="o">=</span> <span class="n">b</span>
+	<span class="k">return</span> <span class="n">t</span>
+</div>
+<div class="viewcode-block" id="AddrPFX"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.AddrPFX">[docs]</a><span class="k">def</span> <span class="nf">AddrPFX</span><span class="p">(</span><span class="n">b</span><span class="p">,</span><span class="n">t</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Either return a new :class:`.TypeCheckInfo` object with the *addro* field</span>
+<span class="sd">	set to *b* if *t* is `None`, or update *t* with that information.</span>
+<span class="sd">	</span>
+<span class="sd">	:ivar bool b: address size prefix required</span>
+<span class="sd">	:ivar `.TypeCheckInfo` t: existing :class:`TypeCheckInfo` object or `None`</span>
+<span class="sd">	:rtype: .TypeCheckInfo</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="n">TypeCheckInfo</span><span class="p">(</span><span class="n">addro</span><span class="o">=</span><span class="n">b</span><span class="p">)</span>
+	<span class="n">t</span><span class="o">.</span><span class="n">addro</span> <span class="o">=</span> <span class="n">b</span>
+	<span class="k">return</span> <span class="n">t</span>
+</div>
+<div class="viewcode-block" id="SegPFX"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.SegPFX">[docs]</a><span class="k">def</span> <span class="nf">SegPFX</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">t</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>  
+	<span class="sd">&quot;&quot;&quot;Either return a new :class:`.TypeCheckInfo` object with the *sego* field</span>
+<span class="sd">	set to *s* if *t* is `None`, or update *t* with that information.</span>
+<span class="sd">	</span>
+<span class="sd">	:ivar `.SegElt` s: segment prefix required</span>
+<span class="sd">	:ivar `.TypeCheckInfo` t: existing :class:`TypeCheckInfo` object or `None`</span>
+<span class="sd">	:rtype: .TypeCheckInfo</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="n">TypeCheckInfo</span><span class="p">(</span><span class="n">sego</span><span class="o">=</span><span class="n">s</span><span class="p">)</span>
+	<span class="n">t</span><span class="o">.</span><span class="n">sego</span> <span class="o">=</span> <span class="n">s</span>
+	<span class="k">return</span> <span class="n">t</span>
+</div>
+<div class="viewcode-block" id="MATCHES"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.MATCHES">[docs]</a><span class="k">def</span> <span class="nf">MATCHES</span><span class="p">():</span> 
+	<span class="sd">&quot;&quot;&quot;Return an empty :class:`.TypeCheckInfo` object.&quot;&quot;&quot;</span>
+	<span class="k">return</span> <span class="n">TypeCheckInfo</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="X86TypeChecker"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker">[docs]</a><span class="k">class</span> <span class="nc">X86TypeChecker</span><span class="p">(</span><span class="n">Visitor2</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;This :class:`~.Visitor.Visitor2` class implements type-checking for X86</span>
+<span class="sd">	instructions.</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	
+<div class="viewcode-block" id="X86TypeChecker.check"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.check">[docs]</a>	<span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">aop</span><span class="p">,</span><span class="n">opnd</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;The main interface method that clients should call when type-checking a</span>
+<span class="sd">		single abstract operand / x86 operand pair.  Look up the :class:`.X86AOTDL`</span>
+<span class="sd">		for *aop*, and check its compatibility with *opnd*.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.AOTElt` aop:</span>
+<span class="sd">		:param `.X86Internal.Operand` opnd:</span>
+<span class="sd">		:rtype: .TypeCheckInfo</span>
+<span class="sd">		:returns: Information about required prefix overrides, or `None` if *opnd*</span>
+<span class="sd">			was incompatible with *aop*.</span>
+
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">check_sizes</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">aop</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lenient_sizes</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">opnd</span><span class="p">,</span><span class="n">AOTtoAOTDL</span><span class="p">[</span><span class="n">aop</span><span class="o">.</span><span class="n">IntValue</span><span class="p">()])</span>
+
+	<span class="c">#: For these abstract operand types, don&#39;t check the sizes.</span></div>
+	<span class="n">lenient_sizes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">OFPEnv</span><span class="p">,</span><span class="n">OFPEnvLow</span><span class="p">,</span><span class="n">OSimdState</span><span class="p">])</span>
+	
+<div class="viewcode-block" id="X86TypeChecker.TypeCheckInstruction_exn"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.TypeCheckInstruction_exn">[docs]</a>	<span class="k">def</span> <span class="nf">TypeCheckInstruction_exn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">instr</span><span class="p">,</span><span class="n">aops</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Checks the instruction&#39;s operands against a list of abstract</span>
+<span class="sd">		operand types.  This particular variant of the function will throw an </span>
+<span class="sd">		exception with information as to why the instruction was not accepted.</span>
+<span class="sd">		Another method, :meth:`TypeCheckInstruction_opt`, catches exceptions and </span>
+<span class="sd">		returns ``None`` if one was raised.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.X86.Instruction` instr: instruction to type-check</span>
+<span class="sd">		:param aops: list of abstract operand types to check against</span>
+<span class="sd">		:type aops: :class:`.AOTElt` list</span>
+<span class="sd">		:rtype: ( `bool` , `bool`, `.SegElt` ) tuple</span>
+<span class="sd">		:raises `X86TypeCheckError`: if the instruction or one of its operands did </span>
+<span class="sd">			not match.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+
+		<span class="c"># If the number of operands differs, the encoding cannot be valid.</span>
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">aops</span><span class="p">)</span> <span class="o">!=</span> <span class="n">instr</span><span class="o">.</span><span class="n">NumOps</span><span class="p">():</span>
+			<span class="k">raise</span> <span class="n">X86TypeCheckError</span><span class="p">(</span><span class="s">&quot;Operand lengths differ!&quot;</span><span class="p">)</span>
+
+		<span class="c"># If there are no operands, there can be no overrides.</span>
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">aops</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="k">return</span> <span class="p">(</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">None</span><span class="p">)</span>
+
+		<span class="c"># Given two TypeCheckInfo objects, ensure that their override requirements</span>
+		<span class="c"># do not conflict.  Return whether the prefix is required, or None.</span>
+		<span class="k">def</span> <span class="nf">reduce_typeinfo</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span><span class="n">t2</span><span class="p">):</span>
+			<span class="k">def</span> <span class="nf">opcheck</span><span class="p">(</span><span class="n">bo1</span><span class="p">,</span><span class="n">bo2</span><span class="p">,</span><span class="n">errorstr</span><span class="p">):</span>
+				<span class="k">if</span> <span class="n">bo1</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="n">bo2</span>
+				<span class="k">if</span> <span class="n">bo2</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="n">bo1</span>
+				<span class="k">if</span> <span class="n">bo1</span> <span class="o">==</span> <span class="n">bo2</span><span class="p">:</span>  <span class="k">return</span> <span class="n">bo1</span>
+				<span class="k">raise</span> <span class="n">X86TypeCheckError</span><span class="p">(</span><span class="n">errorstr</span><span class="p">)</span>
+			
+			<span class="c"># &quot;Accumulate&quot; the override information in t1.  I.e., if the first </span>
+			<span class="c"># operand specified an address size override, and the second operand</span>
+			<span class="c"># specified an operand size override, we need to have both of those</span>
+			<span class="c"># facts available when checking the third operand.  Update the t1 </span>
+			<span class="c"># structure and return it.</span>
+
+			<span class="c"># If both sizes can be overriden, they must either both be overridden, </span>
+			<span class="c"># or both not be overridden.  Same for address sizes.</span>
+			<span class="n">t1</span><span class="o">.</span><span class="n">sizeo</span> <span class="o">=</span> <span class="n">opcheck</span><span class="p">(</span><span class="n">t1</span><span class="o">.</span><span class="n">sizeo</span><span class="p">,</span><span class="n">t2</span><span class="o">.</span><span class="n">sizeo</span><span class="p">,</span><span class="s">&quot;Size mismatch!&quot;</span><span class="p">)</span>
+			<span class="n">t1</span><span class="o">.</span><span class="n">addro</span> <span class="o">=</span> <span class="n">opcheck</span><span class="p">(</span><span class="n">t1</span><span class="o">.</span><span class="n">addro</span><span class="p">,</span><span class="n">t2</span><span class="o">.</span><span class="n">addro</span><span class="p">,</span><span class="s">&quot;Address size mismatch!&quot;</span><span class="p">)</span>
+		
+			<span class="c"># For segments, if multiple segment overrides are present, ensure the</span>
+			<span class="c"># overrides match.</span>
+			<span class="n">t1</span><span class="o">.</span><span class="n">sego</span>  <span class="o">=</span> <span class="n">opcheck</span><span class="p">(</span><span class="n">t1</span><span class="o">.</span><span class="n">sego</span><span class="p">,</span><span class="n">t2</span><span class="o">.</span><span class="n">sego</span><span class="p">,</span><span class="s">&quot;Segments clash!&quot;</span><span class="p">)</span>
+			<span class="k">return</span> <span class="n">t1</span>
+
+		<span class="c"># Begin with a non-existent TypeCheckInfo last_ti.</span>
+		<span class="n">last_ti</span> <span class="o">=</span> <span class="bp">None</span>
+		
+		<span class="c"># Iterate through all of the TypeCheckInfo objects and make sure that they</span>
+		<span class="c"># are mutually coherent, using the reduce_typeinfo function above.</span>
+		<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">aops</span><span class="p">)):</span>
+			<span class="c"># Visit the operand and turn it into a TypeCheckInfo object.</span>
+			<span class="n">ti</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">aops</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">instr</span><span class="o">.</span><span class="n">GetOp</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+			<span class="k">if</span> <span class="n">ti</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">raise</span> <span class="n">X86TypeCheckError</span><span class="p">(</span><span class="s">&quot;Operand does not match!&quot;</span><span class="p">)</span>
+			<span class="n">last_ti</span> <span class="o">=</span> <span class="n">ti</span> <span class="k">if</span> <span class="n">last_ti</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">reduce_typeinfo</span><span class="p">(</span><span class="n">last_ti</span><span class="p">,</span><span class="n">ti</span><span class="p">)</span>
+
+		<span class="c"># Return a triple describing required overrides.</span>
+		<span class="k">return</span> <span class="p">(</span><span class="n">last_ti</span><span class="o">.</span><span class="n">sizeo</span> <span class="o">==</span> <span class="bp">True</span><span class="p">,</span><span class="n">last_ti</span><span class="o">.</span><span class="n">addro</span> <span class="o">==</span> <span class="bp">True</span><span class="p">,</span><span class="n">last_ti</span><span class="o">.</span><span class="n">sego</span><span class="p">)</span>
+		</div>
+<div class="viewcode-block" id="X86TypeChecker.TypeCheckInstruction_opt"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.TypeCheckInstruction_opt">[docs]</a>	<span class="k">def</span> <span class="nf">TypeCheckInstruction_opt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">instr</span><span class="p">,</span><span class="n">aops</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Calls :meth:`TypeCheckInstruction_exn`.  If it throws an exception,</span>
+<span class="sd">		return `None`.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.X86.Instruction` instr: instruction to type-check</span>
+<span class="sd">		:param aops: list of abstract operand types to check against</span>
+<span class="sd">		:type aops: :class:`.AOTElt` list</span>
+<span class="sd">		:rtype: ( `bool` , `bool`, `.SegElt` ) tuple</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">retval</span> <span class="o">=</span> <span class="bp">None</span>
+		<span class="k">try</span><span class="p">:</span> <span class="n">retval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TypeCheckInstruction_exn</span><span class="p">(</span><span class="n">instr</span><span class="p">,</span><span class="n">aops</span><span class="p">)</span>
+		<span class="k">except</span> <span class="n">X86TypeCheckError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="k">pass</span>
+		<span class="k">return</span> <span class="n">retval</span>
+</div>
+<div class="viewcode-block" id="X86TypeChecker.MakeMethodName"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.MakeMethodName">[docs]</a>	<span class="k">def</span> <span class="nf">MakeMethodName</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op1</span><span class="p">,</span><span class="n">enc</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;We override this method from the :class:`~.Visitor.Visitor` class to</span>
+<span class="sd">		simplify the design.  In particular, we separate the types that may be held</span>
+<span class="sd">		by :class:`~.ImmEnc` and :class:`~.SignedImm` operand descriptions.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op1:  X86 operand to check</span>
+<span class="sd">		:param `.X86AOTDL` enc:  AOTDL for which to choose a </span>
+<span class="sd">			:meth:`visit_` method.</span>
+<span class="sd">		:rtype: string</span>
+<span class="sd">		:returns: a string naming one of the `visit_` methods.</span>
+<span class="sd">		</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">enc</span><span class="p">,</span><span class="n">ImmEnc</span><span class="p">):</span>
+			<span class="n">op</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">archetype</span>
+			<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">MemExpr</span><span class="p">):</span>   <span class="k">return</span> <span class="s">&quot;visit_Immediate_MemExpr&quot;</span>
+			<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">FarTarget</span><span class="p">):</span> <span class="k">return</span> <span class="s">&quot;visit_Immediate_FarTarget&quot;</span>
+			<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">Immediate</span><span class="p">):</span> <span class="k">return</span> <span class="s">&quot;visit_Immediate_Immediate&quot;</span>
+			<span class="k">return</span> <span class="s">&quot;visit_Immediate_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">op</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+
+		<span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">enc</span><span class="p">,</span><span class="n">SignedImm</span><span class="p">):</span>
+			<span class="n">op</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">archetype</span>
+			<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">JccTarget</span><span class="p">):</span> <span class="k">return</span> <span class="s">&quot;visit_Immediate_JccTarget&quot;</span>
+			<span class="k">return</span> <span class="s">&quot;visit_SignExtImm_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">op</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+
+		<span class="k">return</span> <span class="s">&quot;visit_&quot;</span> <span class="o">+</span> <span class="n">enc</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+	</div>
+<div class="viewcode-block" id="X86TypeChecker.Default"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.Default">[docs]</a>	<span class="k">def</span> <span class="nf">Default</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op1</span><span class="p">,</span><span class="n">enc</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;This method is invoked when the operand *op1* and AOTDL *enc* were</span>
+<span class="sd">		incompatible, the default case for a :class:`~.Visitor.Visitor` object.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op1:  X86 operand which failed type-checking</span>
+<span class="sd">		:param `.X86AOTDL` enc:  AOTDL which failed type-checking</span>
+<span class="sd">		:rtype: ``None``</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">None</span>
+	</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_SizePrefix"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_SizePrefix">[docs]</a>	<span class="k">def</span> <span class="nf">visit_SizePrefix</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">z</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;Used when visiting prefixed operand types.  First, try to visit the </span>
+<span class="sd">		member where a prefix is required (i.e., *z*&#39;s *yes* member).  If it </span>
+<span class="sd">		matches, update the information returned to indicate that the prefix was </span>
+<span class="sd">		required.  Otherwise, visit the member where no prefix is required (i.e., </span>
+<span class="sd">		*z*&#39;s *no* member), and if that matches, return the flags from the match </span>
+<span class="sd">		plus a flag indicating that an override is possible (but not required).  </span>
+<span class="sd">		Otherwise, no match, i.e. return ``None``.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op1:  X86 operand</span>
+<span class="sd">		:param `.SizePrefix` z:</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_SizePrefix&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_AddrPrefix"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_AddrPrefix">[docs]</a>	<span class="k">def</span> <span class="nf">visit_AddrPrefix</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;See comments for :meth:`visit_SizePrefix`.</span>
+
+<span class="sd">		:param `.Operand` op1:  X86 operand</span>
+<span class="sd">		:param `.AddrPrefix` a:</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_AddrPrefix&quot;</span><span class="p">)</span>
+		</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_Exact"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_Exact">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Exact</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;For Exact AOTDL elements, *op* must match *a*&#39;s *value* member exactly.</span>
+
+<span class="sd">		:param `.Operand` op:  X86 operand</span>
+<span class="sd">		:param `.Exact` a:</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="n">a</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_Exact&quot;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">None</span>
+	</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_ExactSeg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_ExactSeg">[docs]</a>	<span class="k">def</span> <span class="nf">visit_ExactSeg</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;For ExactSeg AOTDL elements, *op* must match *a*&#39;s *value* member </span>
+<span class="sd">		exactly, or it must match *value* when *value*&#39;s :attr:`~.Seg` attribute</span>
+<span class="sd">		is changed to that of *op*.  In the latter case, the return value must</span>
+<span class="sd">		indicate that a segment override prefix is required.</span>
+
+<span class="sd">		:param `.Operand` op:  X86 operand</span>
+<span class="sd">		:param `.ExactSeg` a:</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="n">a</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> 
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_ExactSeg: Exact match&quot;</span><span class="p">)</span>
+
+		<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">MemExpr</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">value</span><span class="p">,</span><span class="n">MemExpr</span><span class="p">):</span>
+			<span class="c"># Make a copy of a.value with op&#39;s segment, and compare it to op.</span>
+			<span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">op</span><span class="o">.</span><span class="n">Seg</span><span class="p">)</span> <span class="o">==</span> <span class="n">op</span><span class="p">:</span> 
+				<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_ExactSeg: Segment differs&quot;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_RegOrMem"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_RegOrMem">[docs]</a>	<span class="k">def</span> <span class="nf">visit_RegOrMem</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">m</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For RegOrMem AOTDL elements, check both possibilities:  that *op* may </span>
+<span class="sd">		match *m*&#39;s *reg* component, or that it may match the *mem* component </span>
+<span class="sd">		(specified by a :class:`~.MSElt` enumeration element).  When comparing </span>
+<span class="sd">		memories, issue any necessary address and/or segment override prefixes.</span>
+<span class="sd">		The size of the memory is part of the comparison, unless the abstract</span>
+<span class="sd">		operand type is one of those for which size comparisons should not occur</span>
+<span class="sd">		(see :attr:`.lenient_sizes`).</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op:  X86 operand</span>
+<span class="sd">		:param `.RegOrMem` m:</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">reg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">op</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">reg</span><span class="p">):</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_RegOrMem:Register&quot;</span><span class="p">)</span>
+
+		<span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">mem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">MemExpr</span><span class="p">):</span>
+			<span class="c"># For certain memory-related AOTs, we are lenient about the sizes of </span>
+			<span class="c"># memory operands.  I.e., we just ensure that the operand is a memory</span>
+			<span class="c"># without regard to its size.  For all other AOTs, check that the size</span>
+			<span class="c"># is correct.</span>
+			<span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">mem</span> <span class="o">==</span> <span class="n">op</span><span class="o">.</span><span class="n">size</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">s</span><span class="o">.</span><span class="n">check_sizes</span><span class="p">:</span>
+				
+				<span class="c"># Check whether op&#39;s segment differs from its default segment.  If so,</span>
+				<span class="c"># indicate that that particular segment prefix is required.</span>
+				<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_RegOrMem:Memory:Segment&quot;</span><span class="p">)</span>
+				<span class="n">s_tc</span> <span class="o">=</span> <span class="bp">None</span>
+				
+				<span class="c"># Check whether op is a Mem16, i.e., requires an ADDRSIZE prefix.  a_tc</span>
+				<span class="c"># should be created based on s_tc.</span>
+				<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_RegOrMem:Memory:Addrsize&quot;</span><span class="p">)</span>
+				<span class="n">a_tc</span> <span class="o">=</span> <span class="bp">None</span>
+
+				<span class="k">return</span> <span class="n">a_tc</span>
+		<span class="k">return</span> <span class="bp">None</span>
+	</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_GPart"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_GPart">[docs]</a>	<span class="k">def</span> <span class="nf">visit_GPart</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For GPart AOTDL elements, ensure that the operand type specified in </span>
+<span class="sd">		*a*&#39;s *archetype* member has the same type as the operand *op*.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op:  X86 operand</span>
+<span class="sd">		:param `.GPart` a:</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">op</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">archetype</span><span class="p">):</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_GPart&quot;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">None</span>
+	</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_Immediate_MemExpr"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_Immediate_MemExpr">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Immediate_MemExpr</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For ImmEnc AOTDL elements whose *archetype* members are of type </span>
+<span class="sd">		:class:`.MemExpr`, ensure that the operand *op* is indeed a </span>
+<span class="sd">		:class:`.MemExpr` object that consists solely of a displacement </span>
+<span class="sd">		(:attr:`~.MemExpr.Disp` member) -- in particular, that :attr:`.BaseReg` and</span>
+<span class="sd">		:attr:`.IndexReg` are ``None``.  As for all :class:`.MemExpr` operands,</span>
+<span class="sd">		check for address-size and segment-override prefixes.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op:  X86 operand</span>
+<span class="sd">		:param `.ImmEnc` a: :class:`ImmEnc` with :class:`.MemExpr` *archetype*</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="c"># Check for immediate only</span>
+		<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">MemExpr</span><span class="p">)</span> <span class="ow">and</span> <span class="n">op</span><span class="o">.</span><span class="n">BaseReg</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">op</span><span class="o">.</span><span class="n">IndexReg</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+			<span class="c"># Check that the sizes match</span>
+			<span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">archetype</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">op</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+				<span class="c"># Check the segment and address size prefix requirements, identically</span>
+				<span class="c"># to the RegOrMem memory case.</span>
+				<span class="n">s_tc</span> <span class="o">=</span> <span class="bp">None</span>
+				<span class="n">a_tc</span> <span class="o">=</span> <span class="bp">None</span>
+				<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_Immediate_MemExpr&quot;</span><span class="p">)</span>
+
+				<span class="k">return</span> <span class="n">a_tc</span>
+		<span class="k">return</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_Immediate_FarTarget"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_Immediate_FarTarget">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Immediate_FarTarget</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For ImmEnc AOTDL elements whose *archetype* members are of type </span>
+<span class="sd">		:class:`.FarTarget`, ensure that the operand *op* has the same type as</span>
+<span class="sd">		*archetype*.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op:  X86 operand</span>
+<span class="sd">		:param `.ImmEnc` a: :class:`ImmEnc` with :class:`.AP16` or :class:`.AP32`</span>
+<span class="sd">			*archetype*</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">op</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">archetype</span><span class="p">):</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_Immediate_FarTarget&quot;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_Immediate_JccTarget"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_Immediate_JccTarget">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Immediate_JccTarget</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For ImmEnc AOTDL elements whose *archetype* members are of type </span>
+<span class="sd">		:class:`.JccTarget`, ensure that the operand *op* also has type </span>
+<span class="sd">		:class:`.JccTarget`.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op:  X86 operand</span>
+<span class="sd">		:param `.ImmEnc` a: :class:`ImmEnc` with :class:`.JccTarget` *archetype*</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">JccTarget</span><span class="p">):</span> 
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_Immediate_JccTarget&quot;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_Immediate_Immediate"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_Immediate_Immediate">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Immediate_Immediate</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For ImmEnc AOTDL elements whose *archetype* members are of type </span>
+<span class="sd">		:class:`.ImmEnc`, ensure that the operand *op* has the same type as </span>
+<span class="sd">		*archetype*.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op:  X86 operand</span>
+<span class="sd">		:param `.ImmEnc` a: :class:`ImmEnc` with :class:`.Immediate` *archetype*</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">op</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">archetype</span><span class="p">):</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_Immediate_Immediate&quot;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">None</span>
+	</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_SignExtImm_Iw"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_SignExtImm_Iw">[docs]</a>	<span class="k">def</span> <span class="nf">visit_SignExtImm_Iw</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For SignedImm AOTDL elements whose *archetype* members are of type </span>
+<span class="sd">		:class:`~.Iw`, ensure that the operand *op* is an :class:`~.Immediate` with</span>
+<span class="sd">		a *value* that fits into 8-bits and can be sign-extended to the same 16-bit</span>
+<span class="sd">		constant.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op:  X86 operand</span>
+<span class="sd">		:param `.SignedImm` a: :class:`~.SignedImm` with :class:`~.Iw` *archetype*</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">Immediate</span><span class="p">)</span> <span class="ow">and</span> <span class="n">op</span><span class="o">.</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mh">0x80</span> <span class="ow">or</span> <span class="n">op</span><span class="o">.</span><span class="n">value</span> <span class="o">&gt;=</span> <span class="mh">0xFF80</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_SignExtImm_Iw&quot;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">None</span>
+		</div>
+<div class="viewcode-block" id="X86TypeChecker.visit_SignExtImm_Id"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86TypeChecker.X86TypeChecker.visit_SignExtImm_Id">[docs]</a>	<span class="k">def</span> <span class="nf">visit_SignExtImm_Id</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">op</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For SignedImm AOTDL elements whose *archetype* members are of type </span>
+<span class="sd">		:class:`~.Id`, ensure that the operand *op* is an :class:`~.Immediate` with</span>
+<span class="sd">		a *value* that fits into 8-bits and can be sign-extended to the same 32-bit</span>
+<span class="sd">		constant.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Operand` op:  X86 operand</span>
+<span class="sd">		:param `.SignedImm` a: :class:`~.SignedImm` with :class:`~.Iw` *archetype*</span>
+<span class="sd">		:rtype: TypeCheckInfo</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mh">0x80</span> <span class="ow">or</span> <span class="n">op</span><span class="o">.</span><span class="n">value</span> <span class="o">&gt;=</span> <span class="mh">0xFFFFFF80</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86TypeChecker::visit_SignExtImm_Id&quot;</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">None</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

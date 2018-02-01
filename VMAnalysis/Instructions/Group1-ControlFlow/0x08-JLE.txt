@@ -1,0 +1,21 @@
+.text:0040379E     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData] ; ECX := &Instruction->Data[0]
+.text:00403772     mov     eax, [ebx+VMContext.SavedESP1]            ; EAX := Host ESP
+.text:0040377A     mov     eax, [eax]                                ; EAX := Saved flags
+.text:00403755     test    eax, 40h
+.text:00403760     jnz     short loc_40374A                          ; Jump if ZF is set
+
+; JNZ path:
+	.text:0040374A     jmp     [ebx+VMContext.fpVMRelativeJump]        ; Conditional true
+
+; JZ path:
+	.text:004037A7     test    eax, 800h                               ; Test OF
+	.text:00403739     setnz   dl                          
+	.text:00403794     test    eax, 80h                                ; Test SF
+	.text:0040376A     setnz   al                          
+	.text:00403781     cmp     al, dl                                  ; Is OF==SF?
+	.text:0040372C     jnz     short loc_40374A                        ; Jump if OF!=SF
+
+	; JNZ path
+		.text:0040374A     jmp     [ebx+VMContext.fpVMRelativeJump] ; 00402280: pointer to code to switch to another keyed block by displacement (0x00402B74)
+	; JZ path
+		.text:00403789     jmp     [ebx+VMContext.fpVMNext]    ; 00402375: pointer to code to jump to next keyed block (0x00402B68 for this sample)

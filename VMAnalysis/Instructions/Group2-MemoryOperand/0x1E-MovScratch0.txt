@@ -1,0 +1,6 @@
+.text:00404260     xor     ecx, ecx                                      ; ECX := 0
+.text:0040423E     mov     [ebx+VMContext.dwScratch], ecx                ; Set scratch to 000403F7C: scratch data area
+.text:00404279     add     [ebx+VMContext.pCurrInsn], size VMInstruction ; Next instruction
+.text:0040424A     mov     esp, [ebx+VMContext.SavedESP1]                ; Restore host ESP
+.text:00404253     mov     eax, [ebx+VMContext.fpVMEntry]                ; EAX := ordinary VM re-entry sequence
+.text:0040426D     jmp     [ebx+VMContext.fpVMReEntryToFuncPtr]          ; Re-enter VM with state on stack

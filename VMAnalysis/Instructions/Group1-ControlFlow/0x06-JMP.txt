@@ -1,0 +1,19 @@
+.text:00403398     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData] ; ECX := &Instruction->Data[0]
+.text:004033D1     mov     edi, [ebx+VMContext.pScratch]         ; EDI := dynamic code generation stack
+.text:00403237     mov     eax, [ebx+VMContext.SavedESP1]        ; EAX := host ESP
+.text:00403219     and     eax, 2Fh
+.text:00403350     lea     edi, [eax+edi-4AEDE7CFh]              ; Stupid obfuscation on the value of EDI
+.text:00403244     mov     dword ptr [edi+4AEDE7CFh], 0B0F802E9h ; [EDI]    := E9 02 F8 B0
+.text:00403266     mov     word ptr [edi+4AEDE7D3h], 0B8F9h      ; [EDI+4]  := F9 B8
+.text:00403382     call    $+5
+.text:00403387     pop     eax
+.text:00403253     lea     eax, [eax+42h] ; 0x004033C9
+.text:00403305     mov     [edi+4AEDE7D5h], eax                  ; [EDI+6]  := 0x004033C9
+.text:00403229     mov     word ptr [edi+4AEDE7D9h], 0E0FFh      ; [EDI+10] := FF E0
+.text:004032A1     mov     al, [ecx]                             ; al = first byte of instruction data
+.text:004032CA     mov     [edi+4AEDE7CFh], al                   ; [EDI] := al, overwriting E9
+.text:00403412     mov     eax, [ebx+VMContext.SavedESP1]        ; EAX := host ESP
+.text:004033B6     lea     edi, [edi+4AEDE7CFh]                  ; EDI := beginning of code we just wrote
+.text:0040332F     push    dword ptr [eax]                       ; Push saved flags
+.text:004032E2     popf                                          ; Restore flags
+.text:0040331E     jmp     edi                                   ; Jump to the code we just generated

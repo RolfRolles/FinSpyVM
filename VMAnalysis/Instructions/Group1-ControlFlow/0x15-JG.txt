@@ -1,0 +1,22 @@
+.text:00403D2C     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData] ; ECX := &Instruction-Data[0]
+.text:00403D08     mov     eax, [ebx+VMContext.SavedESP1]            ; EAX := host ESP
+.text:00403D7E     mov     eax, [eax]                                ; EAX := saved flags
+.text:00403D62     test    eax, 40h                                  ; Is ZF (0x40) set?
+.text:00403D20     jnz     short loc_403D41                          ; Jump if set
+
+; JNZ path
+	.text:00403D41     jmp     [ebx+VMContext.fpVMNext]    ; Next instruction (conditional was false)
+
+; JZ path
+	.text:00403D9B     test    eax, 800h                               ; X86Flags_OF
+	.text:00403D56     setnz   dl
+	.text:00403D72     test    eax, 80h                                ; X86Flags_SF
+	.text:00403D88     setnz   al                          
+	.text:00403D37     cmp     al, dl                                  ; Was SF==OF?
+	.text:00403D91     jnz     short loc_403D41                        ; Jump if SF!=OF
+	
+	; JNZ path
+		.text:00403D41     jmp     [ebx+VMContext.fpVMNext]              ; Next instruction (conditional was false)
+	
+	; JZ path
+		.text:00403D49     jmp     [ebx+VMContext.fpVMRelativeJump]      ; Take branch (conditional was true)

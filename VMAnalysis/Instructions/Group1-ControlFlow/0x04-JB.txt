@@ -1,0 +1,10 @@
+.text:00403158     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData] ; ECX := Instruction->Data[0]
+.text:00403139     mov     eax, [ebx+VMContext.SavedESP1]            ; EAX := host ESP
+.text:00403145     mov     eax, [eax]                                ; EAX := saved flags
+.text:00403173     test    eax, 1                                    ; Is CF set?
+.text:0040318F     jnz     short loc_403181                          ; Jump if CF was set
+
+; JNZ path
+	.text:00403181     jmp     [ebx+VMContext.fpVMRelativeJump] ; 00402280: pointer to code to switch to another keyed block by displacement (0x00402B74)
+; JZ path
+	.text:00403165     jmp     [ebx+VMContext.fpVMNext]    ; 00402375: pointer to code to jump to next keyed block (0x00402B68 for this sample)

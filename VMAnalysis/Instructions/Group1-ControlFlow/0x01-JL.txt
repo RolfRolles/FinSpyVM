@@ -1,0 +1,15 @@
+.text:00403007     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData] ; ECX := &Instruction->Data[0]
+.text:00402FD2     mov     eax, [ebx+VMContext.SavedESP1]            ; EAX := host ESP
+.text:00402FE8     mov     eax, [eax]                                ; Get saved flags
+.text:0040302D     test    eax, 800h                                 ; Is OF set?
+.text:00402FFA     setnz   dl
+.text:0040303C     test    eax, 80h                                  ; Is SF set?
+.text:0040304C     setnz   al
+.text:00403014     cmp     al, dl                                    ; Is SF != OF?
+.text:00403021     jnz     short loc_402FDD                          ; Jump if SF != OF
+
+; JNZ path
+	.text:00402FDD     jmp     [ebx+VMContext.fpVMRelativeJump]        ; Condition was true
+
+; JZ path
+	.text:00402FC9     jmp     [ebx+VMContext.fpVMNext]                ; Condition was false

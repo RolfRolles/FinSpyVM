@@ -1,0 +1,457 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.X86.X86Decoder &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Pandemic.X86.X86Decoder</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;This module provides the class :class:`X86Decoder` to decode X86 machine </span>
+<span class="sd">code.  For flexibility, this class consumes bytes from an </span>
+<span class="sd">:class:`X86ByteStream.StreamObj`.  Owing to this design decision, we can obtain</span>
+<span class="sd">the bytes from any source, as long as we can implement the :class:`.StreamObj`</span>
+<span class="sd">interface around that byte source.  For example, we could use IDA&#39;s </span>
+<span class="sd">``get_byte()``, map a PE file into a flat memory view and index into that, use</span>
+<span class="sd">a debugger&#39;s capabilities to read from memory, etc.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">X86</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">X86ByteStream</span> <span class="kn">import</span> <span class="n">StreamObj</span>
+<span class="kn">import</span> <span class="nn">X86DecodeTable</span>
+<span class="kn">from</span> <span class="nn">X86ModRM</span> <span class="kn">import</span> <span class="n">ModRM16</span><span class="p">,</span> <span class="n">ModRM32</span><span class="p">,</span> <span class="n">sign_extend_8_16</span><span class="p">,</span> <span class="n">sign_extend_8_32</span><span class="p">,</span> <span class="n">modrm_16</span>
+<span class="kn">from</span> <span class="nn">X86InternalOperandDescriptions</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">Pandemic.Util.Visitor</span> <span class="kn">import</span> <span class="n">Visitor</span>
+<span class="kn">from</span> <span class="nn">Pandemic.Util.ExerciseError</span> <span class="kn">import</span> <span class="n">ExerciseError</span>
+	
+<div class="viewcode-block" id="X86Decoder"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder">[docs]</a><span class="k">class</span> <span class="nc">X86Decoder</span><span class="p">(</span><span class="n">Visitor</span><span class="p">):</span>
+<div class="viewcode-block" id="X86Decoder.Reset"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.Reset">[docs]</a>	<span class="k">def</span> <span class="nf">Reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Reset the variables held in the decoder.&quot;&quot;&quot;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">group1pfx</span> <span class="o">=</span> <span class="p">[]</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">sizepfx</span> <span class="o">=</span> <span class="bp">False</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">addrpfx</span> <span class="o">=</span> <span class="bp">False</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">segpfx</span>  <span class="o">=</span> <span class="bp">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span>  <span class="o">=</span> <span class="bp">None</span>
+		</div>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">stream</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Set the stream object (from whence the bytes are consumed) and reset the</span>
+<span class="sd">		state.&quot;&quot;&quot;</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">Stream</span> <span class="o">=</span> <span class="n">stream</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">Reset</span><span class="p">()</span>
+	
+<div class="viewcode-block" id="X86Decoder.GetSegment"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.GetSegment">[docs]</a>	<span class="k">def</span> <span class="nf">GetSegment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Get the segment to use for a memory expression.  If there is a segment</span>
+<span class="sd">		prefix, use that.  If there is no ModRM, use ``DS``.  If there is a ModRM,</span>
+<span class="sd">		inspect the base register and use either ``DS`` or ``SS`` accordingly.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: :class:`~.SegElt`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">segpfx</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">segpfx</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="n">DS</span>
+
+		<span class="c"># For 32-bit, use SS if base register is Esp or Ebp, otherwise DS.</span>
+		<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span><span class="p">,</span><span class="n">ModRM32</span><span class="p">):</span>
+			<span class="n">basereg</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">s</span><span class="p">,</span><span class="n">d</span><span class="p">,</span><span class="n">ds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span><span class="o">.</span><span class="n">Interpret</span><span class="p">()</span> 
+			<span class="k">if</span> <span class="n">basereg</span> <span class="o">==</span> <span class="n">Ebp</span> <span class="ow">or</span> <span class="n">basereg</span> <span class="o">==</span> <span class="n">Esp</span><span class="p">:</span>
+				<span class="k">return</span> <span class="n">SS</span>
+
+		<span class="c"># For 16-bit, use SS if base register is Bp, otherwise DS.</span>
+		<span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span><span class="p">,</span><span class="n">ModRM16</span><span class="p">):</span>
+			<span class="n">basereg</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">d</span><span class="p">,</span><span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span><span class="o">.</span><span class="n">Interpret</span><span class="p">()</span> 
+			<span class="k">if</span> <span class="n">basereg</span> <span class="o">==</span> <span class="n">Bp</span><span class="p">:</span> 
+				<span class="k">return</span> <span class="n">SS</span>
+
+		<span class="k">return</span> <span class="n">DS</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.DecodePrefixes"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.DecodePrefixes">[docs]</a>	<span class="k">def</span> <span class="nf">DecodePrefixes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Consume all of the prefixes before the instruction stem, and update the</span>
+<span class="sd">		class variables accordingly.  When we consume a non-prefix byte, we stop</span>
+<span class="sd">		and return it.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: integer</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+			<span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Byte</span><span class="p">()</span>
+			<span class="k">if</span>   <span class="n">b</span> <span class="o">==</span> <span class="mh">0xF0</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">group1pfx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LOCK</span><span class="p">)</span>
+			<span class="k">elif</span> <span class="n">b</span> <span class="o">==</span> <span class="mh">0xF2</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">group1pfx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">REPNE</span><span class="p">)</span>
+			<span class="k">elif</span> <span class="n">b</span> <span class="o">==</span> <span class="mh">0xF3</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">group1pfx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">REP</span><span class="p">)</span>
+			<span class="k">elif</span> <span class="n">b</span> <span class="o">==</span> <span class="mh">0x2E</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">segpfx</span> <span class="o">=</span> <span class="n">CS</span>
+			<span class="k">elif</span> <span class="n">b</span> <span class="o">==</span> <span class="mh">0x36</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">segpfx</span> <span class="o">=</span> <span class="n">SS</span>
+			<span class="k">elif</span> <span class="n">b</span> <span class="o">==</span> <span class="mh">0x3E</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">segpfx</span> <span class="o">=</span> <span class="n">DS</span>
+			<span class="k">elif</span> <span class="n">b</span> <span class="o">==</span> <span class="mh">0x26</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">segpfx</span> <span class="o">=</span> <span class="n">ES</span>
+			<span class="k">elif</span> <span class="n">b</span> <span class="o">==</span> <span class="mh">0x64</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">segpfx</span> <span class="o">=</span> <span class="n">FS</span>
+			<span class="k">elif</span> <span class="n">b</span> <span class="o">==</span> <span class="mh">0x65</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">segpfx</span> <span class="o">=</span> <span class="n">GS</span>
+			<span class="k">elif</span> <span class="n">b</span> <span class="o">==</span> <span class="mh">0x66</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sizepfx</span> <span class="o">=</span> <span class="bp">True</span>
+			<span class="k">elif</span> <span class="n">b</span> <span class="o">==</span> <span class="mh">0x67</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">addrpfx</span> <span class="o">=</span> <span class="bp">True</span>
+			<span class="k">else</span><span class="p">:</span>           <span class="k">return</span> <span class="n">b</span>
+		</div>
+<div class="viewcode-block" id="X86Decoder.DecodeStem"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.DecodeStem">[docs]</a>	<span class="k">def</span> <span class="nf">DecodeStem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">first_byte</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Given the first byte of the stem (as read by DecodePrefixes above), examine</span>
+<span class="sd">		it and any subsequent escape bytes to determine the stem.</span>
+<span class="sd">		</span>
+<span class="sd">		:param integer first_byte:</span>
+<span class="sd">		:rtype: integer</span>
+<span class="sd">		:returns: A stem number from ``0x000-0x3FF``.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">first_byte</span> <span class="o">!=</span> <span class="mh">0x0F</span><span class="p">:</span> <span class="k">return</span> <span class="n">first_byte</span>
+		<span class="n">second_byte</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Byte</span><span class="p">()</span>
+		<span class="k">if</span>   <span class="n">second_byte</span> <span class="o">==</span> <span class="mh">0x38</span><span class="p">:</span> <span class="k">return</span> <span class="mh">0x200</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Byte</span><span class="p">()</span>
+		<span class="k">elif</span> <span class="n">second_byte</span> <span class="o">==</span> <span class="mh">0x3A</span><span class="p">:</span> <span class="k">return</span> <span class="mh">0x300</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Byte</span><span class="p">()</span>
+		<span class="k">return</span> <span class="mh">0x100</span> <span class="o">|</span> <span class="n">second_byte</span>
+</div>
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">ModRM</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;As in :class:`~.X86Encoder.X86Encoder`, the use of class properties </span>
+<span class="sd">		makes ModRM accesses very slick.  We don&#39;t have to explicitly store a table</span>
+<span class="sd">		describing which stems need a ModRM, like most other disassemblers.  </span>
+<span class="sd">		Instead, we simply wait until some part of the code touches the ModRM </span>
+<span class="sd">		property for the first time.  At that point, we parse the ModRM (depending</span>
+<span class="sd">		upon the address-size prefix) and store it within the object.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+			<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">addrpfx</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span> <span class="o">=</span> <span class="n">ModRM16</span><span class="p">()</span>
+			<span class="k">else</span><span class="p">:</span>            <span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span> <span class="o">=</span> <span class="n">ModRM32</span><span class="p">()</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span><span class="o">.</span><span class="n">Decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="p">)</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modrm</span>
+	
+<div class="viewcode-block" id="X86Decoder.Decode"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.Decode">[docs]</a>	<span class="k">def</span> <span class="nf">Decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ea</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;The main interface to the decoder functionality.</span>
+<span class="sd">		</span>
+<span class="sd">		:param integer ea: The address from which to decode</span>
+<span class="sd">		:rtype: :class:`X86DecodedInstruction`</span>
+<span class="sd">		&quot;&quot;&quot;</span>		
+		<span class="c"># Reset the state of the class.</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">Reset</span><span class="p">()</span>
+		
+		<span class="c"># Set the position within the stream.</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">SetPos</span><span class="p">(</span><span class="n">ea</span><span class="p">)</span>
+		
+		<span class="c"># Consume prefixes and update prefix-related variables; consume stem.</span>
+		<span class="n">stem</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DecodeStem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DecodePrefixes</span><span class="p">())</span>
+		
+		<span class="c"># Find the entry for that stem in the decoding table.</span>
+		<span class="n">entry</span> <span class="o">=</span> <span class="n">X86DecodeTable</span><span class="o">.</span><span class="n">decoding_table</span><span class="p">[</span><span class="n">stem</span><span class="p">]</span>
+		
+		<span class="c"># Get the mnemonic and abstract operand type, if no exception is thrown.</span>
+		<span class="n">mnem</span><span class="p">,</span><span class="n">oplist</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+		
+		<span class="c"># Decode each operand using the visitor methods below.</span>
+		<span class="n">ops</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">o</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">AOTtoAOTDL</span><span class="p">[</span><span class="n">o</span><span class="o">.</span><span class="n">IntValue</span><span class="p">()]),</span><span class="n">oplist</span><span class="p">)</span>
+		
+		<span class="c"># Create an Instruction object.</span>
+		<span class="n">instr</span> <span class="o">=</span> <span class="n">Instruction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">group1pfx</span><span class="p">,</span><span class="n">mnem</span><span class="p">,</span><span class="o">*</span><span class="n">ops</span><span class="p">)</span>
+		
+		<span class="c"># Look at the stream position to calculate length.</span>
+		<span class="n">final_ea</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Pos</span><span class="p">()</span>
+		
+		<span class="c"># Return the instruction with its address and length.</span>
+		<span class="k">return</span> <span class="n">X86DecodedInstruction</span><span class="p">(</span><span class="n">ea</span><span class="p">,</span><span class="n">instr</span><span class="p">,</span><span class="n">final_ea</span><span class="o">-</span><span class="n">ea</span><span class="p">)</span>
+	</div>
+<div class="viewcode-block" id="X86Decoder.MakeMethodName"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.MakeMethodName">[docs]</a>	<span class="k">def</span> <span class="nf">MakeMethodName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">enc</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;We override this method from the :class:`~.Visitor.Visitor` class to</span>
+<span class="sd">		simplify the design.  We segregate the :class:`.ImmEnc`, </span>
+<span class="sd">		:class:`.RegOrMem`, and :class:`.SignedImm` encodings by their type so as</span>
+<span class="sd">		to choose a specialized :meth:`visit_` method.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.X86AOTDL` enc:</span>
+<span class="sd">		:rtype: string</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">enc</span><span class="p">,</span><span class="n">ImmEnc</span><span class="p">):</span>
+			<span class="n">op</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">archetype</span>
+			<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">MemExpr</span><span class="p">):</span>   <span class="k">return</span> <span class="s">&quot;visit_Immediate_MemExpr&quot;</span>
+			<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">FarTarget</span><span class="p">):</span> <span class="k">return</span> <span class="s">&quot;visit_Immediate_FarTarget&quot;</span>
+			<span class="k">return</span> <span class="s">&quot;visit_Immediate_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">op</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+
+		<span class="c"># We have to special-case SegReg, since there are only 6 segment registers.</span>
+		<span class="c"># We unify the logic for all other register types, as there are 8 possible</span>
+		<span class="c"># registers for each other register type.</span>
+		<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">enc</span><span class="p">,</span><span class="n">GPart</span><span class="p">):</span>
+			<span class="n">op</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">archetype</span>
+			<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span><span class="n">SegReg</span><span class="p">):</span>
+				<span class="k">return</span> <span class="s">&quot;visit_GPart_SegReg&quot;</span>
+
+		<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">enc</span><span class="p">,</span><span class="n">RegOrMem</span><span class="p">):</span>
+			<span class="n">suffix</span> <span class="o">=</span> <span class="s">&quot;Register&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ModRM</span><span class="o">.</span><span class="n">MOD</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="s">&quot;MemExpr&quot;</span>
+			<span class="k">return</span> <span class="s">&quot;visit_RegOrMem_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">suffix</span>
+		
+		<span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">enc</span><span class="p">,</span><span class="n">SignedImm</span><span class="p">):</span> 
+			<span class="k">return</span> <span class="s">&quot;visit_SignExtImm_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">enc</span><span class="o">.</span><span class="n">archetype</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+
+		<span class="k">return</span> <span class="s">&quot;visit_&quot;</span> <span class="o">+</span> <span class="n">enc</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_Exact"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_Exact">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Exact</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span>      
+		<span class="sd">&quot;&quot;&quot;For Exact operand types, return *i*&#39;s *value* field directly.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.Exact` i:</span>
+<span class="sd">		:rtype: :class:`~.Operand`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_Exact&quot;</span><span class="p">)</span>
+	</div>
+<div class="viewcode-block" id="X86Decoder.visit_ExactSeg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_ExactSeg">[docs]</a>	<span class="k">def</span> <span class="nf">visit_ExactSeg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;For ExactSeg operand types, return *i*&#39;s *value* field directly if there</span>
+<span class="sd">		was no segment override, or a copy of *value* with the overridden segment</span>
+<span class="sd">		if there was.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.ExactSeg` i:</span>
+<span class="sd">		:rtype: :class:`~.MemExpr`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_ExactSeg&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_GPart"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_GPart">[docs]</a>	<span class="k">def</span> <span class="nf">visit_GPart</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">g</span><span class="p">):</span>         
+		<span class="sd">&quot;&quot;&quot;For GPart operand types, return a register with the same type as *g*&#39;s</span>
+<span class="sd">		*archetype* field, whose register number is the ModRM :attr:`.GGG` field.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.GPart` g:</span>
+<span class="sd">		:rtype: :class:`~.Register`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_GPart&quot;</span><span class="p">)</span>
+	</div>
+<div class="viewcode-block" id="X86Decoder.visit_GPart_SegReg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_GPart_SegReg">[docs]</a>	<span class="k">def</span> <span class="nf">visit_GPart_SegReg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">g</span><span class="p">):</span>         
+		<span class="sd">&quot;&quot;&quot;For GPart operand types describing segment registers, check to see that</span>
+<span class="sd">		the register number is in bound (``0-5``).  If not, raise an </span>
+<span class="sd">		:exc:`~.InvalidInstruction` exception.  Otherwise, return the segment </span>
+<span class="sd">		register numbered by ModRM :attr:`.GGG` field.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.GPart` g:</span>
+<span class="sd">		:rtype: :class:`~.Register`</span>
+<span class="sd">		:raises: :exc:`~.InvalidInstruction` if GGG is out of bounds.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ModRM</span><span class="o">.</span><span class="n">GGG</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">InvalidInstruction</span><span class="p">()</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_GPart&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_RegOrMem_Register"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_RegOrMem_Register">[docs]</a>	<span class="k">def</span> <span class="nf">visit_RegOrMem_Register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">m</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;For RegOrMem when a register is specified, create a new register of the</span>
+<span class="sd">		type held in *m*&#39;s reg field.</span>
+<span class="sd">		</span>
+<span class="sd">		:raises: :exc:`.InvalidInstruction` if *m*&#39;s *reg* field is ``None``, i.e.</span>
+<span class="sd">			register values are illegal for this abstract operand type.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.RegOrMem` m:</span>
+<span class="sd">		:rtype: :class:`~.Register`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">reg</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> 
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_RegOrMem_Register:None&quot;</span><span class="p">)</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_RegOrMem_Register:Default&quot;</span><span class="p">)</span>
+
+	<span class="c"># For ModRM when a memory is specified, create a Mem16 or Mem32 object </span>
+	<span class="c"># depending upon address size, using the information from the ModRM.</span></div>
+<div class="viewcode-block" id="X86Decoder.visit_RegOrMem_MemExpr"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_RegOrMem_MemExpr">[docs]</a>	<span class="k">def</span> <span class="nf">visit_RegOrMem_MemExpr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">m</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;For RegOrMem when memory is specified, create a :class:`Mem16` or </span>
+<span class="sd">		:class:`Mem32` object depending upon address size, using the information</span>
+<span class="sd">		from :attr:`X86Decoder.ModRM`.</span>
+<span class="sd">		</span>
+<span class="sd">		:raises: :exc:`.InvalidInstruction` if *m*&#39;s *mem* field is ``None``, i.e.</span>
+<span class="sd">			memory locations are illegal for this abstract operand type.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.RegOrMem` m:</span>
+<span class="sd">		:rtype: :class:`~.MemExpr`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">mem</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> 
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_RegOrMem_MemExpr:None&quot;</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">seg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetSegment</span><span class="p">()</span>
+			
+			<span class="c"># Decode a 16-bit ModRM</span>
+			<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">addrpfx</span><span class="p">:</span> 
+				<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_RegOrMem_MemExpr:Mem16&quot;</span><span class="p">)</span>
+			 
+			<span class="c"># Decode a 32-bit ModRM</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_RegOrMem_MemExpr:Mem32&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_Immediate_Ib"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_Immediate_Ib">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Immediate_Ib</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span>  
+		<span class="sd">&quot;&quot;&quot;Read a byte from the stream, and return it as an immediate.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.ImmEnc` i:</span>
+<span class="sd">		:rtype: :class:`.Ib`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_Immediate_Ib&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_Immediate_Iw"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_Immediate_Iw">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Immediate_Iw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span>  
+		<span class="sd">&quot;&quot;&quot;Read a word from the stream, and return it as an immediate.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.ImmEnc` i:</span>
+<span class="sd">		:rtype: :class:`.Iw`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_Immediate_Iw&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_Immediate_Id"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_Immediate_Id">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Immediate_Id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span>  
+		<span class="sd">&quot;&quot;&quot;Read a dword from the stream, and return it as an immediate.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.ImmEnc` i:</span>
+<span class="sd">		:rtype: :class:`.Id`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_Immediate_Id&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_Immediate_MemExpr"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_Immediate_MemExpr">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Immediate_MemExpr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Create a :class:`Mem16` or :class:`Mem32` depending upon the address</span>
+<span class="sd">		size prefix.  The memory expression consists of only a displacement and</span>
+<span class="sd">		no base or index registers, using a word or dword read from the stream,</span>
+<span class="sd">		respectively.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.ImmEnc` i:</span>
+<span class="sd">		:rtype: :class:`.MemExpr`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">seg</span><span class="p">,</span><span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetSegment</span><span class="p">(),</span><span class="n">i</span><span class="o">.</span><span class="n">archetype</span><span class="o">.</span><span class="n">size</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">addrpfx</span><span class="p">:</span> <span class="k">return</span> <span class="n">Mem16</span><span class="p">(</span><span class="n">seg</span><span class="p">,</span><span class="n">size</span><span class="p">,</span><span class="bp">None</span><span class="p">,</span><span class="bp">None</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Word</span><span class="p">())</span>
+		<span class="k">else</span><span class="p">:</span>            <span class="k">return</span> <span class="n">Mem32</span><span class="p">(</span><span class="n">seg</span><span class="p">,</span><span class="n">size</span><span class="p">,</span><span class="bp">None</span><span class="p">,</span><span class="bp">None</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Dword</span><span class="p">())</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_Immediate_FarTarget"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_Immediate_FarTarget">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Immediate_FarTarget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Create a :class:`AP16` or :class:`AP32` depending upon the address</span>
+<span class="sd">		size prefix.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.ImmEnc` i:</span>
+<span class="sd">		:rtype: :class:`.FarTarget`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">addrpfx</span><span class="p">:</span> 
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_Immediate_FarTarget:AP16&quot;</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_Immediate_FarTarget:AP32&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_SignExtImm_Iw"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_SignExtImm_Iw">[docs]</a>	<span class="k">def</span> <span class="nf">visit_SignExtImm_Iw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;Read a byte from the steam and sign-extend it to a word.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.SignedImm` i:</span>
+<span class="sd">		:rtype: :class:`.Iw`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_SignExtImm_Iw&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_SignExtImm_Id"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_SignExtImm_Id">[docs]</a>	<span class="k">def</span> <span class="nf">visit_SignExtImm_Id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;Read a byte from the steam and sign-extend it to a dword.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.SignedImm` i:</span>
+<span class="sd">		:rtype: :class:`.Id`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_SignExtImm_Id&quot;</span><span class="p">)</span>
+	</div>
+<div class="viewcode-block" id="X86Decoder.visit_SizePrefix"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_SizePrefix">[docs]</a>	<span class="k">def</span> <span class="nf">visit_SizePrefix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">z</span><span class="p">):</span>     
+		<span class="sd">&quot;&quot;&quot;Depending upon the operand size prefix, call :meth:`visit` on either </span>
+<span class="sd">		*z*&#39;s *yes* or *no* member.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.SizePrefix` z:</span>
+<span class="sd">		:rtype: :class:`.Operand`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_SizePrefix&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.visit_AddrPrefix"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_AddrPrefix">[docs]</a>	<span class="k">def</span> <span class="nf">visit_AddrPrefix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">a</span><span class="p">):</span>    
+		<span class="sd">&quot;&quot;&quot;Depending upon the address size prefix, call :meth:`visit` on either </span>
+<span class="sd">		*z*&#39;s *yes* or *no* member.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.AddrPrefix` a:</span>
+<span class="sd">		:rtype: :class:`.Operand`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="n">ExerciseError</span><span class="p">(</span><span class="s">&quot;X86Decoder::visit_AddrPrefix&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="X86Decoder.oJCommon"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.oJCommon">[docs]</a>	<span class="k">def</span> <span class="nf">oJCommon</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">x</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;Common method for decoding jumps.  Calculate the target of the jump, and</span>
+<span class="sd">		then truncate to 16-bits if there was an address size prefix.</span>
+<span class="sd">		</span>
+<span class="sd">		:param integer x: displacement from the end of the current instruction</span>
+<span class="sd">		:rtype: :class:`.JccTarget`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="n">ea</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Pos</span><span class="p">()</span>
+		<span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">ea</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">addrpfx</span><span class="p">:</span> <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">&amp;</span><span class="mh">0xFFFF</span>
+		<span class="k">return</span> <span class="n">JccTarget</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">ea</span><span class="p">)</span>
+	</div>
+<div class="viewcode-block" id="X86Decoder.visit_Immediate_JccTarget"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_Immediate_JccTarget">[docs]</a>	<span class="k">def</span> <span class="nf">visit_Immediate_JccTarget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">j</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Read a dword-sized displacement (or word-sized if there was an address</span>
+<span class="sd">		prefix) and call :meth:`oJCommon`.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.ImmEnc` j:</span>
+<span class="sd">		:rtype: :class:`.JccTarget`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">addrpfx</span><span class="p">:</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">oJCommon</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Word</span><span class="p">())</span>
+		<span class="k">else</span><span class="p">:</span>            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">oJCommon</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Dword</span><span class="p">())</span>
+		</div>
+<div class="viewcode-block" id="X86Decoder.visit_SignExtImm_JccTarget"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Decoder.X86Decoder.visit_SignExtImm_JccTarget">[docs]</a>	<span class="k">def</span> <span class="nf">visit_SignExtImm_JccTarget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">i</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Read a byte-sized displacement, sign-extend it to a dword, and call</span>
+<span class="sd">		:meth:`oJCommon`.</span>
+<span class="sd">		</span>
+<span class="sd">		:param `.SignedImm` i:</span>
+<span class="sd">		:rtype: :class:`.JccTarget`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">oJCommon</span><span class="p">(</span><span class="n">sign_extend_8_32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Stream</span><span class="o">.</span><span class="n">Byte</span><span class="p">()))</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

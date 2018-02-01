@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.Util.HashFunctions &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Pandemic.Util.HashFunctions</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;To simplify the boilerplate involved with hashing in our classes, i.e.,</span>
+<span class="sd">implementing the ``__hash__`` method, this module provides binary and unary </span>
+<span class="sd">hash functions whose behavior is modified through a parameter, which is </span>
+<span class="sd">basically a salt.  For a given concrete class, this parameter is known as its</span>
+<span class="sd">&quot;hash code&quot;.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">random</span>
+
+<div class="viewcode-block" id="rol"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.HashFunctions.rol">[docs]</a><span class="k">def</span> <span class="nf">rol</span><span class="p">(</span><span class="n">bits</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">amt</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Implementation of standard rotate left.&quot;&quot;&quot;</span>
+	<span class="n">bitmask</span> <span class="o">=</span> <span class="n">bits</span><span class="o">-</span><span class="mi">1</span>
+	<span class="n">amt</span> <span class="o">=</span> <span class="n">amt</span> <span class="o">&amp;</span> <span class="n">bitmask</span>
+	<span class="k">return</span> <span class="p">(</span><span class="n">bitmask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;&lt;</span> <span class="n">amt</span><span class="p">))</span> <span class="o">|</span> <span class="p">(</span><span class="n">bitmask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">value</span> <span class="o">&gt;&gt;</span> <span class="p">(</span><span class="n">bits</span><span class="o">-</span><span class="n">amt</span><span class="p">)))</span>
+</div>
+<div class="viewcode-block" id="ror"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.HashFunctions.ror">[docs]</a><span class="k">def</span> <span class="nf">ror</span><span class="p">(</span><span class="n">bits</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">amt</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Implementation of standard rotate right.&quot;&quot;&quot;</span>
+	<span class="n">bitmask</span> <span class="o">=</span> <span class="n">bits</span><span class="o">-</span><span class="mi">1</span>
+	<span class="n">amt</span> <span class="o">=</span> <span class="n">amt</span> <span class="o">&amp;</span> <span class="n">bitmask</span>
+	<span class="k">return</span> <span class="p">(</span><span class="n">bitmask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">value</span> <span class="o">&gt;&gt;</span> <span class="n">amt</span><span class="p">))</span> <span class="o">|</span> <span class="p">(</span><span class="n">bitmask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">bits</span><span class="o">-</span><span class="n">amt</span><span class="p">)))</span>
+
+<span class="c"># An array of random numbers.</span></div>
+<span class="n">random_numbers</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mh">0xFFFFFFFF</span><span class="p">),</span><span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">64</span><span class="p">))</span>
+
+<div class="viewcode-block" id="unary_hash"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.HashFunctions.unary_hash">[docs]</a><span class="k">def</span> <span class="nf">unary_hash</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">n</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Unary hash of a value *x*, implemented by XORing against a list of random</span>
+<span class="sd">	integers.  To provide salt, use the *n* parameter (the hash code) to decide </span>
+<span class="sd">	which random number to XOR against.</span>
+<span class="sd">	</span>
+<span class="sd">	:param integer x: value to hash.</span>
+<span class="sd">	:param integer n: salt / hash code.</span>
+<span class="sd">	:rtype: integer</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">random_numbers</span><span class="p">):</span>
+		<span class="n">n</span> <span class="o">%=</span> <span class="nb">len</span><span class="p">(</span><span class="n">random_numbers</span><span class="p">)</span>
+	<span class="k">return</span> <span class="n">x</span> <span class="o">^</span> <span class="n">random_numbers</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+
+<span class="c"># Eight different ways of combining two hashes.</span></div>
+<span class="n">BinaryHashFunctions</span> <span class="o">=</span> <span class="p">[</span>
+<span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="n">rol</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="mi">13</span><span class="p">)</span> <span class="o">^</span> <span class="n">ror</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="mi">7</span><span class="p">)),</span>
+<span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="n">rol</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="mi">7</span><span class="p">)</span>  <span class="o">-</span> <span class="n">ror</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="mi">13</span><span class="p">)),</span>
+<span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="n">rol</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>  <span class="o">+</span> <span class="n">ror</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="mi">9</span><span class="p">)),</span>
+<span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="n">rol</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="mi">9</span><span class="p">)</span>  <span class="o">^</span> <span class="n">ror</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="mi">5</span><span class="p">)),</span>
+<span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="n">rol</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">x</span><span class="o">^</span><span class="n">y</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="mi">5</span><span class="p">)),</span>
+<span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="n">ror</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">x</span><span class="o">+</span><span class="n">y</span><span class="p">,</span><span class="mi">5</span><span class="p">)),</span>
+<span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="n">rol</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">x</span><span class="o">-</span><span class="n">y</span><span class="o">+</span><span class="mi">5</span><span class="p">,</span><span class="mi">13</span><span class="p">)),</span>
+<span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="n">ror</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span><span class="n">x</span><span class="o">+</span><span class="n">y</span><span class="o">-</span><span class="mi">7</span><span class="p">,</span><span class="mi">13</span><span class="p">))]</span>
+
+<div class="viewcode-block" id="binary_hash"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.HashFunctions.binary_hash">[docs]</a><span class="k">def</span> <span class="nf">binary_hash</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">n</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Binary hash.  Use ``n&amp;7`` to determine one of eight possible binary hash</span>
+<span class="sd">	functions, and then XOR with the *n*th random integer for good measure.  </span>
+<span class="sd">	Note that I have no idea what I am doing nor what constitutes a &quot;good </span>
+<span class="sd">	measure&quot;.</span>
+
+<span class="sd">	:param integer x: first value to hash.</span>
+<span class="sd">	:param integer y: second value to hash.</span>
+<span class="sd">	:param integer n: salt / hash code.</span>
+<span class="sd">	:rtype: integer</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="n">idx</span> <span class="o">=</span> <span class="n">n</span>
+	<span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">random_numbers</span><span class="p">):</span>
+		<span class="n">idx</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">random_numbers</span><span class="p">)</span>
+	<span class="n">hashres</span> <span class="o">=</span> <span class="n">BinaryHashFunctions</span><span class="p">[</span><span class="n">n</span> <span class="o">&amp;</span> <span class="mi">7</span><span class="p">](</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span> <span class="c"># Truncate n to 0..7</span>
+	<span class="k">return</span> <span class="n">hashres</span> <span class="o">^</span> <span class="n">random_numbers</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

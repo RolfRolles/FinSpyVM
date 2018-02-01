@@ -1,0 +1,9 @@
+.text:004030DD     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData] ; ECX := &Instruction->Data[0]
+.text:004030EB     mov     eax, [ebx+VMContext.SavedESP1]            ; EAX := Host ESP
+.text:004030F9     mov     eax, [eax]                                ; EAX := Saved flags
+.text:00403125     test    eax, 1                                    ; Is CF set?
+.text:00403111     jz      short loc_40311C                          ; Jump if CF is not set
+; JZ path
+	.text:0040311C     jmp     [ebx+VMContext.fpVMRelativeJump]        ; Conditional was true
+; JNZ path
+	.text:00403104     jmp     [ebx+VMContext.fpVMNext]                ; Conditional was false

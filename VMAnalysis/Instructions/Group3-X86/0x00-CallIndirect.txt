@@ -1,0 +1,45 @@
+.text:00402E57     mov     edi, [ebx+VMContext.pScratch] ; EDI := dynamically generated code stack
+.text:00402EC4     add     [ebx+VMContext.pScratch], 30h ; Grow the stack upward by 0x30 so we don't get overwritten
+.text:00402F0F     mov     word ptr [edi], 37ACh         ; Stupid obfuscation                     
+.text:00402DB1     xor     word ptr [edi], 5631h         ; In total, write 9C 61 (popf/popa)      
+.text:00402F71     push    edi                           
+.text:00402F5F     add     edi, 2
+.text:00402E31     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData]
+.text:00402DDA     mov     byte ptr [edi], 2Eh           ; Stupid obfuscation                     
+.text:00402DE2     xor     byte ptr [edi], 46h           ; In total, write 68 (push dword...)      
+.text:00402D98     movzx   eax, byte ptr [ebx+VMContext.CurrentInsn.DataLength]
+.text:00402D78     add     eax, edi                      ; EAX := length of x86 machine code in Instruction
+.text:00402D59     add     eax, 5                        ; EAX := Original EDI + 2 + 5 + length of x86
+.text:00402F4A     mov     [edi+1], eax                  ; push dword (pointer to after the copied x86 instruction)
+.text:00402D6D     add     edi, 5
+.text:00402D21     lea     esi, [ecx+4]                
+.text:00402E0B     movzx   ecx, byte ptr [ebx+VMContext.CurrentInsn.DataLength]
+.text:00402E61     rep movsb                             ; Copy the x86 machine code from Instruction to dynamic code
+.text:00402D84     pop     edx
+.text:00402EE9     mov     byte ptr [edi], 12h           
+.text:00402D35     xor     byte ptr [edi], 7Ah           ; In total, write 68 (push dword...)
+.text:00402EA3     mov     eax, [ebx+VMContext.pCurrInsn] 
+.text:00402DA4     add     eax, size VMInstruction
+.text:00402DED     mov     [edi+1], eax                  ; Dword to push = VMEIP + sizeof(VMInstruction)
+.text:00402DED                                           ; I.e. write a raw pointer to next VM instruction
+.text:00402DF7     add     edi, 5
+.text:00402EFD     mov     word ptr [edi], 307Fh         
+.text:00402D47     xor     word ptr [edi], 0AC1Fh        ; Write 60 9C (pusha/pushf)
+.text:00402F39     add     edi, 2                      
+.text:00402E8E     mov     byte ptr [edi], 1Fh           
+.text:00402FB0     xor     byte ptr [edi], 77h           ; Write 68 (push dword...)
+.text:00402F7B     mov     [edi+1], ebx                  ; Dword to push = ebx = VMContext *
+.text:00402E14     add     edi, 5
+.text:00402E83     mov     byte ptr [edi], 70h           ; Write 5B (pop ebx)
+.text:00402E4A     xor     byte ptr [edi], 2Bh         
+.text:00402E71     inc     edi
+.text:00402DC7     mov     byte ptr [edi], 9           
+.text:00402ECF     xor     byte ptr [edi], 61h           ; Write 68 (push dword...)
+.text:00402EB4     mov     ecx, [ebx+VMContext.fpVMReEntryToVMInstructionPtr] 
+.text:00402E20     mov     [edi+1], ecx                  ; DWORD to push = function pointer for VM state on stack re-entry
+.text:00402F9E     add     edi, 5                      
+.text:00402E39     mov     byte ptr [edi], 77h           
+.text:00402ED9     xor     byte ptr [edi], 0B4h          ; Write C3 (retn)
+.text:00402D03     mov     esp, [ebx+VMContext.SavedESP1] ; Restore host ESP
+.text:00402D0C     lea     edx, [edx]
+.text:00402F27     jmp     edx                           ; Jump to code just generated

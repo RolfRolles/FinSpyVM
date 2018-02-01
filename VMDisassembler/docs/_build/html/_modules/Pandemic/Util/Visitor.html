@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.Util.Visitor &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Pandemic.Util.Visitor</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;This module implements two helper classes for implementing the visitor </span>
+<span class="sd">design pattern, :class:`~.Visitor.Visitor` and :class:`~.Visitor.Visitor2`.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Visitor"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Visitor.Visitor">[docs]</a><span class="k">class</span> <span class="nc">Visitor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;This class will help us implement visitor-style program analysis </span>
+<span class="sd">	algorithms.  It exports one method, :meth:`visit`, which uses Python&#39;s type</span>
+<span class="sd">	introspection functionality to:</span>
+
+<span class="sd">	#. Retrieve the class name ``CN`` (as a string) for parameter *x*.</span>
+<span class="sd">	#. Determine whether the Visitor class has a callable method named ``visit_CN``.</span>
+<span class="sd">	#. If it does, invoke that method.</span>
+<span class="sd">	#. If not, invoke :meth:`Visitor.Default`, which defaults to raising an exception.</span>
+
+<span class="sd">	To program a visitor-style algorithm which performs different actions for </span>
+<span class="sd">	different classes, derive a class from :class:`Visitor`, and declare a method</span>
+<span class="sd">	called ``visit_CN`` for each class name ``CN`` that you want to handle.  Each</span>
+<span class="sd">	such method takes one parameter, which shall be an instance of the class </span>
+<span class="sd">	indicated by the method&#39;s name.  Implement your algorithms for handling each </span>
+<span class="sd">	class type within these methods.</span>
+
+<span class="sd">	To use your class to perform an analysis on an object *obj*, instantiate an </span>
+<span class="sd">	instance of the class derived from :class:`Visitor` (let&#39;s say it is held in</span>
+<span class="sd">	a variable named *v*), and then invoke ``v.visit(obj)``.</span>
+
+<span class="sd">	The behaviors of the visitor are configurable:</span>
+
+<span class="sd">	* If you want to change the default behavior, override :meth:`Visitor.Default`.</span>
+<span class="sd">	* If you want to change the names of the methods, override :meth:`Visitor.MakeMethodName`.</span>
+<span class="sd">	* If you want to change how the method is invoked, override :meth:`Visitor.InvokeMethod`.</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Visitor.MakeMethodName"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Visitor.Visitor.MakeMethodName">[docs]</a>	<span class="k">def</span> <span class="nf">MakeMethodName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">o</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;By default, return the string ``visit_CN``, where ``CN`` is *o*&#39;s class</span>
+<span class="sd">		name.</span>
+<span class="sd">		</span>
+<span class="sd">		:param object o: object to inspect</span>
+<span class="sd">		:rtype: string</span>
+<span class="sd">		:returns: The name of the method to invoke.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="s">&quot;visit_&quot;</span> <span class="o">+</span> <span class="n">o</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+	</div>
+<div class="viewcode-block" id="Visitor.InvokeMethod"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Visitor.Visitor.InvokeMethod">[docs]</a>	<span class="k">def</span> <span class="nf">InvokeMethod</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">method</span><span class="p">,</span><span class="n">o</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;By default, simply invoke *method* with *o* as its sole parameter.</span>
+<span class="sd">		</span>
+<span class="sd">		:param method method: a method defined on the current class</span>
+<span class="sd">		:param object o: any object type</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="n">method</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Visitor.Default"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Visitor.Visitor.Default">[docs]</a>	<span class="k">def</span> <span class="nf">Default</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">method_name</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;By default, raise an exception if the method is not present.&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">:  No method </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span><span class="n">method_name</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="Visitor.visit"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Visitor.Visitor.visit">[docs]</a>	<span class="k">def</span> <span class="nf">visit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">o</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;This is what clients call to invoke the visitor algorithm.  You should</span>
+<span class="sd">		never override this method.&quot;&quot;&quot;</span>
+		<span class="c"># Retrieve the method name</span>
+		<span class="n">method_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">MakeMethodName</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+		
+		<span class="c"># Determine whether the current object (self) has a method by that name</span>
+		<span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+
+		<span class="c"># If it does not, invoke the default handler.</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">method</span><span class="p">:</span> 
+			<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">Default</span><span class="p">(</span><span class="n">method_name</span><span class="p">)</span>
+		
+		<span class="c"># If it does, call InvokeMethod.</span>
+		<span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">method</span><span class="p">):</span>
+			<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">InvokeMethod</span><span class="p">(</span><span class="n">method</span><span class="p">,</span><span class="n">o</span><span class="p">)</span>
+		
+		<span class="c"># Otherwise, if the member is present but is not a callable method, that</span>
+		<span class="c"># signifies that the progammer has declared a data item or some other non-</span>
+		<span class="c"># function thing with that name.  This is a programmer error, so throw</span>
+		<span class="c"># an exception.</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">:  </span><span class="si">%s</span><span class="s"> present, but not callable&quot;</span> <span class="o">%</span> <span class="n">method_name</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="Visitor2"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Visitor.Visitor2">[docs]</a><span class="k">class</span> <span class="nc">Visitor2</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;This class implements the same idea as the previous visitor class, except</span>
+<span class="sd">	that the :meth:`visit` method takes two parameters instead of one.  As </span>
+<span class="sd">	before, its behaviors for creating method names, invoking methods, and </span>
+<span class="sd">	default actions are configurable -- and you will probably need to use them </span>
+<span class="sd">	more often than in standard :class:`~.Visitor.Visitor` classes.  On the plus</span>
+<span class="sd">	side, you can play some cool tricks with them, as we shall see.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Visitor2.MakeMethodName"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Visitor.Visitor2.MakeMethodName">[docs]</a>	<span class="k">def</span> <span class="nf">MakeMethodName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">o1</span><span class="p">,</span><span class="n">o2</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Default behavior:  concatenate the class names.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="s">&quot;visit_&quot;</span> <span class="o">+</span> <span class="n">o1</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="n">o2</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+			</div>
+<div class="viewcode-block" id="Visitor2.InvokeMethod"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Visitor.Visitor2.InvokeMethod">[docs]</a>	<span class="k">def</span> <span class="nf">InvokeMethod</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">method</span><span class="p">,</span><span class="n">o1</span><span class="p">,</span><span class="n">o2</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Default behavior:  pass both arguments to the method.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="n">method</span><span class="p">(</span><span class="n">o1</span><span class="p">,</span><span class="n">o2</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Visitor2.Default"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Visitor.Visitor2.Default">[docs]</a>	<span class="k">def</span> <span class="nf">Default</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">method_name</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Default behavior:  raise an exception.&quot;&quot;&quot;</span>
+		<span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">:  No method </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span><span class="n">method_name</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="Visitor2.visit"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Visitor.Visitor2.visit">[docs]</a>	<span class="k">def</span> <span class="nf">visit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">o1</span><span class="p">,</span><span class="n">o2</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Never override this method.&quot;&quot;&quot;</span>
+		<span class="n">method_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">MakeMethodName</span><span class="p">(</span><span class="n">o1</span><span class="p">,</span><span class="n">o2</span><span class="p">)</span>
+		<span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">method</span><span class="p">:</span> 
+			<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">Default</span><span class="p">(</span><span class="n">method_name</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">method</span><span class="p">):</span>
+			<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">InvokeMethod</span><span class="p">(</span><span class="n">method</span><span class="p">,</span><span class="n">o1</span><span class="p">,</span><span class="n">o2</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">:  </span><span class="si">%s</span><span class="s"> present, but not callable&quot;</span> <span class="o">%</span> <span class="n">method_name</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

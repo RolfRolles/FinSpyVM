@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.Util.ASMFlow &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Pandemic.Util.ASMFlow</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;This module implements a generic class hierarchy for describing </span>
+<span class="sd">assembly-language control tranfer behaviors.  For example:</span>
+
+<span class="sd">* ``nop`` simply transfers control to the next instruction</span>
+<span class="sd">* ``jmp`` transfers control to some fixed location</span>
+<span class="sd">* ``ret`` returns</span>
+
+<span class="sd">This module contains a collection of classes, each deriving from </span>
+<span class="sd">:class:`FlowType`, to describe all possible varieties of control flow.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="FlowType"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowType">[docs]</a><span class="k">class</span> <span class="nc">FlowType</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="FlowType.get_successors"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowType.get_successors">[docs]</a>	<span class="k">def</span> <span class="nf">get_successors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Get the addresses of all possible following instructions.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: ( integer list, integer list )</span>
+<span class="sd">		:returns: A pair of lists:  those addresses referenced by jumps or normal</span>
+<span class="sd">			execution, and those addresses that are the targets of call instructions.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">pass</span>
+</div></div>
+<div class="viewcode-block" id="FlowOrdinary"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowOrdinary">[docs]</a><span class="k">class</span> <span class="nc">FlowOrdinary</span><span class="p">(</span><span class="n">FlowType</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Used for most instructions, which only pass execution to the next </span>
+<span class="sd">	instruction.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">passthrough</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">passthrough</span> <span class="o">=</span> <span class="n">passthrough</span>
+<div class="viewcode-block" id="FlowOrdinary.get_successors"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowOrdinary.get_successors">[docs]</a>	<span class="k">def</span> <span class="nf">get_successors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">passthrough</span><span class="p">],[])</span>
+</div></div>
+<div class="viewcode-block" id="FlowCallDirect"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowCallDirect">[docs]</a><span class="k">class</span> <span class="nc">FlowCallDirect</span><span class="p">(</span><span class="n">FlowType</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Direct calls target an address, and also implicitly reference a return </span>
+<span class="sd">  address.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">target</span><span class="p">,</span><span class="n">retaddr</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="n">target</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">retaddr</span> <span class="o">=</span> <span class="n">retaddr</span>
+	
+<div class="viewcode-block" id="FlowCallDirect.get_successors"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowCallDirect.get_successors">[docs]</a>	<span class="k">def</span> <span class="nf">get_successors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">retaddr</span><span class="p">],[</span><span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="p">])</span>
+</div></div>
+<div class="viewcode-block" id="FlowJmpUnconditional"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowJmpUnconditional">[docs]</a><span class="k">class</span> <span class="nc">FlowJmpUnconditional</span><span class="p">(</span><span class="n">FlowType</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Unconditional direct jumps only target one address.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">target</span><span class="p">,</span><span class="n">retaddr</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="n">target</span>
+	
+<div class="viewcode-block" id="FlowJmpUnconditional.get_successors"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowJmpUnconditional.get_successors">[docs]</a>	<span class="k">def</span> <span class="nf">get_successors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="p">],[])</span>
+</div></div>
+<div class="viewcode-block" id="FlowJmpConditional"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowJmpConditional">[docs]</a><span class="k">class</span> <span class="nc">FlowJmpConditional</span><span class="p">(</span><span class="n">FlowType</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Conditional jumps can target two addresses.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">target</span><span class="p">,</span><span class="n">fallthrough</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="n">target</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">fallthrough</span> <span class="o">=</span> <span class="n">fallthrough</span>
+	
+<div class="viewcode-block" id="FlowJmpConditional.get_successors"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowJmpConditional.get_successors">[docs]</a>	<span class="k">def</span> <span class="nf">get_successors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">fallthrough</span><span class="p">],[])</span>
+</div></div>
+<div class="viewcode-block" id="FlowCallIndirect"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowCallIndirect">[docs]</a><span class="k">class</span> <span class="nc">FlowCallIndirect</span><span class="p">(</span><span class="n">FlowType</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;The destinations of indirect calls are unknown, but the return address </span>
+<span class="sd">	is known.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fallthrough</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">retaddr</span> <span class="o">=</span> <span class="n">fallthrough</span>
+	
+<div class="viewcode-block" id="FlowCallIndirect.get_successors"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowCallIndirect.get_successors">[docs]</a>	<span class="k">def</span> <span class="nf">get_successors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">fallthrough</span><span class="p">],[])</span>
+</div></div>
+<div class="viewcode-block" id="FlowJmpIndirect"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowJmpIndirect">[docs]</a><span class="k">class</span> <span class="nc">FlowJmpIndirect</span><span class="p">(</span><span class="n">FlowType</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;The destinations of indirect jumps are unknown.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="FlowJmpIndirect.get_successors"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowJmpIndirect.get_successors">[docs]</a>	<span class="k">def</span> <span class="nf">get_successors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="p">([],[])</span>
+</div></div>
+<div class="viewcode-block" id="FlowReturn"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowReturn">[docs]</a><span class="k">class</span> <span class="nc">FlowReturn</span><span class="p">(</span><span class="n">FlowType</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Return statements are considered to have no outgoing references.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="FlowReturn.get_successors"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.ASMFlow.FlowReturn.get_successors">[docs]</a>	<span class="k">def</span> <span class="nf">get_successors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="p">([],[])</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

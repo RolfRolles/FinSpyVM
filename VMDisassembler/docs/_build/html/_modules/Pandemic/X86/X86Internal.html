@@ -1,0 +1,304 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.X86.X86Internal &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Pandemic.X86.X86Internal</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">X86MetaData</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">Pandemic.Util.Guarded</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">Pandemic.Util.HashFunctions</span> <span class="kn">import</span> <span class="n">unary_hash</span><span class="p">,</span> <span class="n">binary_hash</span>
+
+<div class="viewcode-block" id="X86Hexify"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.X86Hexify">[docs]</a><span class="k">def</span> <span class="nf">X86Hexify</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Function to make an X86-style hexadecimal string.  I.e., it should end in</span>
+<span class="sd">	``h``, should not begin with ``0x``, and should begin with a ``0`` if the </span>
+<span class="sd">	first nibble is ``A-F``.</span>
+<span class="sd">	</span>
+<span class="sd">	:param integer value:</span>
+<span class="sd">	:rtype: string</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="n">hstr</span> <span class="o">=</span> <span class="nb">hex</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+	
+	<span class="n">hstr</span> <span class="o">=</span> <span class="n">hstr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">hstr</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;l&#39;</span> <span class="ow">or</span> <span class="n">hstr</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;L&#39;</span> <span class="k">else</span> <span class="n">hstr</span>
+	<span class="n">hstr</span> <span class="o">=</span> <span class="s">&quot;0&quot;</span><span class="o">+</span><span class="n">hstr</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span> <span class="k">if</span> <span class="n">hstr</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="s">&#39;a&#39;</span> <span class="ow">and</span> <span class="n">hstr</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="s">&#39;f&#39;</span> <span class="k">else</span> <span class="n">hstr</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+	<span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">h&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="o">.</span><span class="n">upper</span><span class="p">(</span><span class="n">hstr</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Operand"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.Operand">[docs]</a><span class="k">class</span> <span class="nc">Operand</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Base class for X86 operands, containing some of the Python glue.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">value</span>
+	
+	<span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
+		<span class="k">return</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">))</span>
+
+	<span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="n">unary_hash</span><span class="p">(</span><span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">held</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">_hashcode</span><span class="p">)</span>
+
+<span class="c"># Registers are held in GuardedEnumeration elements.  This allows us to ensure</span>
+<span class="c"># that they are valid at all times, as well as simplfying the process of </span>
+<span class="c"># printing and setting them, as well as creating them from 0-indexed values.</span>
+<span class="c"># The Register class also supports retrieving the register as a 0-indexed </span>
+<span class="c"># value (its IntValue() method).</span></div>
+<div class="viewcode-block" id="Register"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.Register">[docs]</a><span class="k">class</span> <span class="nc">Register</span><span class="p">(</span><span class="n">Operand</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;The base class for all registers in X86 assembly language.  The </span>
+<span class="sd">	constructor takes two parameters: *value* and *adjust_value*.  If</span>
+<span class="sd">	*adjust_value* is ``False``, *value* is interpreted as an enumeration </span>
+<span class="sd">	element, i.e. some object that is a derivative of :class:`~.EnumElt`,</span>
+<span class="sd">	which must have the same type as the *regtype* member.  If *adjust_value* is</span>
+<span class="sd">	``True``, then *value* is interpreted as an integer, and it is used to</span>
+<span class="sd">	construct an :class:`~.EnumElt` of type *regtype*.</span>
+<span class="sd">	</span>
+<span class="sd">	:ivar `~.EnumElt` value: an enumeration element corresponding to the </span>
+<span class="sd">		particular register being represented</span>
+<span class="sd">	:ivar `~.EnumElt` regtype: a derivative of :class:`~.EnumElt` corresponding</span>
+<span class="sd">		to the type of register a derived class represents</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Register.init"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.Register.init">[docs]</a>	<span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">hashcode</span><span class="p">,</span><span class="n">regtype</span><span class="p">,</span><span class="n">adjust_value</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">regtype</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">adjust_value</span> <span class="k">else</span> <span class="n">value</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">adjust_value</span><span class="p">:</span>
+			<span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">regtype</span><span class="p">):</span>
+				<span class="k">print</span> <span class="s">&quot;Register:  value </span><span class="si">%s</span><span class="s"> requires type </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">regtype</span><span class="p">)</span>
+				<span class="k">raise</span> <span class="ne">TypeError</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_hashcode</span> <span class="o">=</span> <span class="n">hashcode</span>
+	
+	</div>
+<div class="viewcode-block" id="Register.IntValue"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.Register.IntValue">[docs]</a>	<span class="k">def</span> <span class="nf">IntValue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Retrieve the integer value ``0-7`` from the held *value*.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: integer</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">IntValue</span><span class="p">()</span>
+	</div>
+	<span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Create a new :class:`.Register` object, of the same type as *self*,</span>
+<span class="sd">		using the integer value *value*.</span>
+<span class="sd">		</span>
+<span class="sd">		:ivar integer value: the register number for the new :class:`.Register` </span>
+<span class="sd">			object</span>
+<span class="sd">		:rtype: Register</span>
+<span class="sd">		:returns: The new :class:`Register` object corresponding to integer </span>
+<span class="sd">			*value*.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="n">value</span><span class="p">,</span><span class="bp">True</span><span class="p">)</span>
+
+	<span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">(</span><span class="si">%r</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+	
+	<span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+	</div>
+<div class="viewcode-block" id="GeneralReg"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.GeneralReg">[docs]</a><span class="k">class</span> <span class="nc">GeneralReg</span><span class="p">(</span><span class="n">Register</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;GeneralReg gets its own class in the hierarchy, so we can distinguish them</span>
+<span class="sd">	from other types of registers.&quot;&quot;&quot;</span>
+	<span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="Immediate"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.Immediate">[docs]</a><span class="k">class</span> <span class="nc">Immediate</span><span class="p">(</span><span class="n">Operand</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Immediates are held in guarded integers, so that they never exceed their</span>
+<span class="sd">	bounds (i.e., 8-bit values are always 0 &lt;= value &lt;= 0xFF).&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Immediate.init"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.Immediate.init">[docs]</a>	<span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">hashcode</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">mask</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_hashcode</span> <span class="o">=</span> <span class="n">hashcode</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">held</span> <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">mask</span><span class="p">)</span>	
+
+	<span class="c"># This property allows us to access the GuardedInteger&#39;s value transparently.</span></div>
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;The integer value of an immediate constant.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">held</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@value.setter</span>
+	<span class="k">def</span> <span class="nf">value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">val</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">held</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">val</span>
+
+	<span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Create a new :class:`.Immediate` object, of the same type as *self*,</span>
+<span class="sd">		using the integer value *value*.</span>
+<span class="sd">		</span>
+<span class="sd">		:ivar integer value: the value for the new :class:`.Immediate` object</span>
+<span class="sd">		:rtype: Immediate</span>
+<span class="sd">		:returns: The new :class:`Immediate` object with integer value *value*.</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="n">value</span><span class="p">)</span>
+
+	<span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">(</span><span class="si">%#x</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">held</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+	<span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="n">X86Hexify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">held</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+	</div>
+<div class="viewcode-block" id="MemExpr"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.MemExpr">[docs]</a><span class="k">class</span> <span class="nc">MemExpr</span><span class="p">(</span><span class="n">Operand</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Base class for memory operands.</span>
+<span class="sd">	</span>
+<span class="sd">	:ivar `.SegElt` Seg: the segment in which the access takes place</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">size</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">Seg</span> <span class="o">=</span> <span class="n">seg</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span>
+	
+<div class="viewcode-block" id="MemExpr.init"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.MemExpr.init">[docs]</a>	<span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">hashcode</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">size</span><span class="p">,</span><span class="n">regtype</span><span class="p">,</span><span class="n">basereg</span><span class="p">,</span><span class="n">indexreg</span><span class="p">,</span><span class="n">disp</span><span class="p">,</span><span class="n">mask</span><span class="p">,</span><span class="n">adjust_values</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_hashcode</span> <span class="o">=</span> <span class="n">hashcode</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">Seg</span> <span class="o">=</span> <span class="n">seg</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span>  <span class="o">=</span> <span class="n">regtype</span><span class="p">(</span> <span class="n">basereg</span><span class="p">)</span> <span class="k">if</span> <span class="n">adjust_values</span> <span class="k">else</span>  <span class="n">basereg</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span> <span class="o">=</span> <span class="n">regtype</span><span class="p">(</span><span class="n">indexreg</span><span class="p">)</span> <span class="k">if</span> <span class="n">adjust_values</span> <span class="k">else</span> <span class="n">indexreg</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">adjust_values</span><span class="p">:</span>
+			<span class="k">if</span> <span class="n">basereg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">basereg</span><span class="p">,</span><span class="n">regtype</span><span class="p">):</span>
+				<span class="k">print</span> <span class="s">&quot;MemExpr:  basereg </span><span class="si">%s</span><span class="s"> requires type </span><span class="si">%s</span><span class="s">&quot;</span>  <span class="o">%</span> <span class="p">(</span><span class="n">basereg</span><span class="p">,</span><span class="n">regtype</span><span class="p">)</span>
+				<span class="k">raise</span> <span class="ne">TypeError</span>
+			<span class="k">if</span> <span class="n">indexreg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">indexreg</span><span class="p">,</span><span class="n">regtype</span><span class="p">):</span>
+				<span class="k">print</span> <span class="s">&quot;MemExpr:  indexreg </span><span class="si">%s</span><span class="s"> requires type </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">indexreg</span><span class="p">,</span><span class="n">regtype</span><span class="p">)</span>
+				<span class="k">raise</span> <span class="ne">TypeError</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_disp</span> <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="bp">None</span> <span class="k">if</span> <span class="n">disp</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">disp</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">disp</span><span class="p">,</span><span class="n">mask</span><span class="p">)</span>
+	</div>
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">Disp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;Integer displacement; may be ``None``.  16-bit for :class:`Mem16`, </span>
+<span class="sd">		32-bit for :class:`Mem32`.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_disp</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@Disp.setter</span>
+	<span class="k">def</span> <span class="nf">Disp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span> 
+		<span class="bp">self</span><span class="o">.</span><span class="n">_disp</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+	<span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="n">segstr</span> <span class="o">=</span> <span class="s">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Seg</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">DefaultSeg</span><span class="p">()</span> <span class="k">else</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">:&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">Seg</span>
+		<span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s"> ptr </span><span class="si">%s</span><span class="s">[</span><span class="si">%s</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="n">segstr</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">String</span><span class="p">())</span>
+
+<div class="viewcode-block" id="MemExpr.MakeString"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.MemExpr.MakeString">[docs]</a>	<span class="k">def</span> <span class="nf">MakeString</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parts</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Returns a string based on those in *parts*, with ``+`` between the </span>
+<span class="sd">		non-empty strings contained therein.</span>
+<span class="sd">		</span>
+<span class="sd">		:param parts: string parts (some may be ``&quot;&quot;``)</span>
+<span class="sd">		:type parts: string list</span>
+<span class="sd">		:rtype: string</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="s">&quot;+&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">o</span><span class="p">:</span> <span class="n">o</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span><span class="p">,</span><span class="n">parts</span><span class="p">))</span>
+	</div>
+<div class="viewcode-block" id="MemExpr.HashIndex"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.MemExpr.HashIndex">[docs]</a>	<span class="k">def</span> <span class="nf">HashIndex</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Used internally for hashing the index component.  Differs in </span>
+<span class="sd">		:class:`.Mem16` and :class:`.Mem32` objects.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexReg</span><span class="p">)</span>
+	</div>
+	<span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="n">h1</span> <span class="o">=</span> <span class="n">binary_hash</span><span class="p">(</span><span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">BaseReg</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">HashIndex</span><span class="p">(),</span><span class="bp">self</span><span class="o">.</span><span class="n">_hashcode</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">binary_hash</span><span class="p">(</span><span class="n">h1</span><span class="p">,</span><span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Disp</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">_hashcode</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FarTarget"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.FarTarget">[docs]</a><span class="k">class</span> <span class="nc">FarTarget</span><span class="p">(</span><span class="n">Operand</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Base class for memory operands specified as segment:offset pairs.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="FarTarget.init"><a class="viewcode-back" href="../../../Pandemic.X86.html#Pandemic.X86.X86Internal.FarTarget.init">[docs]</a>	<span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">hashcode</span><span class="p">,</span><span class="n">seg</span><span class="p">,</span><span class="n">off</span><span class="p">,</span><span class="n">mask</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_hashcode</span> <span class="o">=</span> <span class="n">hashcode</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_seg</span> <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">seg</span><span class="p">,</span><span class="mh">0xFFFF</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_off</span> <span class="o">=</span> <span class="n">GuardedInteger</span><span class="p">(</span><span class="n">off</span><span class="p">,</span><span class="n">mask</span><span class="p">)</span>
+	
+	<span class="c"># Properties that allow us to access the integer values from the </span>
+	<span class="c"># GuardedInteger representations that we store internally.</span></div>
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">Seg</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;16-bit integer value for the segment.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seg</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@Seg.setter</span>
+	<span class="k">def</span> <span class="nf">Seg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_seg</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+	
+	<span class="nd">@property</span>
+	<span class="k">def</span> <span class="nf">Off</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="sd">&quot;&quot;&quot;Integer value for the offset.  16-bits in :class:`.AP16`, 32-bits in </span>
+<span class="sd">		:class:`.AP32`.&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_off</span><span class="o">.</span><span class="n">value</span>
+	<span class="nd">@Off.setter</span>
+	<span class="k">def</span> <span class="nf">Off</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_off</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+	<span class="c"># Boilerplate</span>
+	<span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">(</span><span class="si">%r</span><span class="s">,</span><span class="si">%r</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">_seg</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">_off</span><span class="p">)</span>
+
+	<span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">X86Hexify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_seg</span><span class="o">.</span><span class="n">value</span><span class="p">),</span><span class="n">X86Hexify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_off</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
+
+	<span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">==</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">Seg</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">Seg</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">Off</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">Off</span>
+	
+	<span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="k">return</span> <span class="n">binary_hash</span><span class="p">(</span><span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_seg</span><span class="p">),</span><span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_off</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">_hashcode</span><span class="p">)</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

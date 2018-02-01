@@ -1,0 +1,215 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pandemic.Util.Enumerate &mdash; Pandemic  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Pandemic  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for Pandemic.Util.Enumerate</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;This module simulates C-style enumerations.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EnumElt"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Enumerate.EnumElt">[docs]</a><span class="k">class</span> <span class="nc">EnumElt</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;This is the base class for all enumeration elements.  In actuality, each</span>
+<span class="sd">	enumeration shall correspond to a class derived from this one, and each </span>
+<span class="sd">	enumeration element shall be an object of that type.&quot;&quot;&quot;</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+		<span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_l</span><span class="p">:</span>
+			<span class="k">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">: value </span><span class="si">%d</span><span class="s"> too large (</span><span class="si">%d</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_l</span><span class="p">)</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_locked</span> <span class="o">=</span> <span class="bp">False</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="n">value</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">_locked</span> <span class="o">=</span> <span class="bp">True</span>
+	<span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span> 
+		<span class="sd">&quot;&quot;&quot;This method returns a new enumeration element of the same type, </span>
+<span class="sd">		corresponding to the integer *value*.</span>
+<span class="sd">		</span>
+<span class="sd">		:param integer value: integer for which to create an :class:`EnumElt`</span>
+<span class="sd">		:rtype: :class:`EnumElt`</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)(</span><span class="n">value</span><span class="p">)</span>
+	
+<div class="viewcode-block" id="EnumElt.IntValue"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Enumerate.EnumElt.IntValue">[docs]</a>	<span class="k">def</span> <span class="nf">IntValue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>       
+		<span class="sd">&quot;&quot;&quot;This method returns the integer corresponding to a particular </span>
+<span class="sd">		enumeration element.</span>
+<span class="sd">		</span>
+<span class="sd">		:rtype: integer</span>
+<span class="sd">		&quot;&quot;&quot;</span>
+		<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span>
+
+	<span class="c"># This is pretty stupid -- we try to prevent the user from modifying the </span>
+	<span class="c"># integer value associated with an enumeration element.  Except, in so doing,</span>
+	<span class="c"># we lose the ability to modify any data within the object.  So we keep </span>
+	<span class="c"># another variable called _locked that determines whether variables can be</span>
+	<span class="c"># written.  It&#39;s dumb; don&#39;t think too hard about it.</span></div>
+	<span class="k">def</span> <span class="nf">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locked</span><span class="p">:</span>
+			<span class="k">print</span> <span class="s">&quot;Trying to assign </span><span class="si">%r</span><span class="s">.</span><span class="si">%s</span><span class="s"> = </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">value</span><span class="p">)</span>
+			<span class="k">raise</span> <span class="ne">RuntimeError</span>
+		<span class="nb">super</span><span class="p">(</span><span class="n">EnumElt</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__setattr__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+	<span class="c"># Boring class methods follow</span>
+	<span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
+		<span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_value</span>
+	<span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>   <span class="k">return</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span> <span class="o">==</span> <span class="n">other</span><span class="p">)</span>
+	<span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_strdict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">]</span>
+	<span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>       <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reprdict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">]</span>
+	<span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>       <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="enum"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Enumerate.enum">[docs]</a><span class="k">def</span> <span class="nf">enum</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="n">names</span><span class="p">,</span><span class="n">reprs</span><span class="p">,</span><span class="n">sequential</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;Create a new type derived from :class:`EnumElt`, whose type name is the</span>
+<span class="sd">	parameter *name* suffixed with the string &quot;Elt&quot;.  Then, create instances of</span>
+<span class="sd">	that class for each string in *sequential*, whose Python-level string shall</span>
+<span class="sd">	be the corresponding element in *names*, and whose Python-level </span>
+<span class="sd">	representation shall be the corresponding element in *reprs*.  I.e., all </span>
+<span class="sd">	three of the mentioned lists must have the same length.</span>
+<span class="sd">	</span>
+<span class="sd">	:param string name: the name of the enumeration.</span>
+<span class="sd">	:param string names: a list of names for the enumeration elements, i.e., </span>
+<span class="sd">		the values returned by a call to ``str``.</span>
+<span class="sd">	:param string reprs: a list of representations for the enumeration elements,</span>
+<span class="sd">		i.e., the values returned by a call to ``repr``.</span>
+<span class="sd">	:param string sequential:  a list of strings, in order, corresponding to the</span>
+<span class="sd">		variable names of the elements.</span>
+<span class="sd">	:rtype: ( `type` , :class:`EnumElt` list )</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sequential</span><span class="p">)</span>
+	<span class="n">ToString</span> <span class="o">=</span> <span class="p">{</span> <span class="n">k</span><span class="p">:</span><span class="n">v</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">l</span><span class="p">),</span><span class="n">names</span><span class="p">)</span> <span class="p">}</span>
+	<span class="n">Reprs</span>    <span class="o">=</span> <span class="p">{</span> <span class="n">k</span><span class="p">:</span><span class="n">v</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">l</span><span class="p">),</span><span class="n">reprs</span><span class="p">)</span> <span class="p">}</span>
+	<span class="n">elttype</span>  <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;Elt&quot;</span><span class="p">,(</span><span class="n">EnumElt</span><span class="p">,),{</span><span class="s">&#39;_locked&#39;</span><span class="p">:</span><span class="bp">False</span><span class="p">,</span><span class="s">&#39;_strdict&#39;</span><span class="p">:</span><span class="n">ToString</span><span class="p">,</span><span class="s">&#39;_reprdict&#39;</span><span class="p">:</span><span class="n">Reprs</span><span class="p">,</span><span class="s">&#39;_l&#39;</span><span class="p">:</span><span class="n">l</span><span class="p">})</span>
+	<span class="n">elements</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">elttype</span><span class="p">,</span><span class="nb">range</span><span class="p">(</span><span class="n">l</span><span class="p">))</span>
+	<span class="k">return</span> <span class="p">(</span><span class="n">elttype</span><span class="p">,</span><span class="n">elements</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="enum_strfn"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Enumerate.enum_strfn">[docs]</a><span class="k">def</span> <span class="nf">enum_strfn</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">strfn</span><span class="p">,</span> <span class="n">reprs</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;This function specializes :func:`enum`.  Use it when the Python ``str``</span>
+<span class="sd">	strings for the enumeration elements are related to the representation </span>
+<span class="sd">	strings (in *reprs* ).  *strfn* is responsible for producing the ``str``</span>
+<span class="sd">	string, given the representation string.</span>
+
+<span class="sd">	:param string name: the name of the enumeration.</span>
+<span class="sd">	:param function strfn: a function that, given the representation string of</span>
+<span class="sd">		an enumeration element, creates its Python-level ``str`` string.</span>
+<span class="sd">	:param string reprs:  a list of strings, in order, corresponding to the</span>
+<span class="sd">		Python-level ``repr`` strings for the elements.</span>
+<span class="sd">	:rtype: ( `type` , :class:`EnumElt` list )</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="n">names</span>    <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">strfn</span><span class="p">,</span><span class="n">reprs</span><span class="p">)</span>
+	<span class="k">return</span> <span class="n">enum</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="n">names</span><span class="p">,</span><span class="n">reprs</span><span class="p">,</span><span class="n">reprs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="enum_upper"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Enumerate.enum_upper">[docs]</a><span class="k">def</span> <span class="nf">enum_upper</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="n">sequential</span><span class="p">):</span> 
+	<span class="sd">&quot;&quot;&quot;A further-specialized version of :func:`enum_strfn`, used when the ``str``</span>
+<span class="sd">	strings for the enumeration elements are the upper-case versions of the </span>
+<span class="sd">	representation strings in *sequential* .</span>
+
+<span class="sd">	:param string name: the name of the enumeration.</span>
+<span class="sd">	:param string sequential:  a list of strings, in order, corresponding to the</span>
+<span class="sd">		Python-level ``repr`` strings for the elements.</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">return</span> <span class="n">enum_strfn</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="nb">str</span><span class="o">.</span><span class="n">upper</span><span class="p">,</span><span class="n">sequential</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="enum_lower"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Enumerate.enum_lower">[docs]</a><span class="k">def</span> <span class="nf">enum_lower</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="n">sequential</span><span class="p">):</span> 
+	<span class="sd">&quot;&quot;&quot;A further-specialized version of :func:`enum_strfn`, used when the ``str``</span>
+<span class="sd">	strings for the enumeration elements are the lower-case versions of the </span>
+<span class="sd">	representation strings in *sequential* .</span>
+
+<span class="sd">	:param string name: the name of the enumeration.</span>
+<span class="sd">	:param string sequential:  a list of strings, in order, corresponding to the</span>
+<span class="sd">		Python-level ``repr`` strings for the elements.</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">return</span> <span class="n">enum_strfn</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="nb">str</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span><span class="n">sequential</span><span class="p">)</span>	
+</div>
+<div class="viewcode-block" id="enum_specialstr"><a class="viewcode-back" href="../../../Pandemic.Util.html#Pandemic.Util.Enumerate.enum_specialstr">[docs]</a><span class="k">def</span> <span class="nf">enum_specialstr</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="n">sequential</span><span class="p">):</span>
+	<span class="sd">&quot;&quot;&quot;This function specializes :func:`enum`.  *sequential* is a list of pairs</span>
+<span class="sd">	of strings, the first being the representation string, the second being the</span>
+<span class="sd">	``str`` string.</span>
+
+<span class="sd">	:param string name: the name of the enumeration.</span>
+<span class="sd">	:param string sequential:  a list of strings, in order, corresponding to the</span>
+<span class="sd">		Python-level ``repr`` strings for the elements.</span>
+<span class="sd">	:rtype: ( `type` , :class:`EnumElt` list )</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="n">names</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">):</span> <span class="n">b</span><span class="p">,</span><span class="n">sequential</span><span class="p">)</span>
+	<span class="n">reprs</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">):</span> <span class="n">a</span><span class="p">,</span><span class="n">sequential</span><span class="p">)</span>
+	<span class="k">return</span> <span class="n">enum</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="n">names</span><span class="p">,</span><span class="n">reprs</span><span class="p">,</span><span class="n">sequential</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">Pandemic  documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b2.
+    </div>
+  </body>
+</html>

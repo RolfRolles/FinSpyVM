@@ -1,0 +1,11 @@
+.text:00404207     lea     ecx, [ebx+VMContext.CurrentInsn.InsnData] ; ECX := &Instruction->Data[0]
+.text:00404212     mov     eax, [ebx+VMContext.SavedESP1]            ; EAX := host ESP 
+.text:004041DB     mov     eax, [eax]                                ; EAX := saved EFLAGS
+.text:004041FD     test    eax, 40h                                  ; Is ZF (0x40) set?
+.text:004041E7     jnz     short loc_4041F4                          ; Jump if set
+
+; JNZ path: ZF was set
+	.text:004041F4     jmp     [ebx+VMContext.fpVMRelativeJump] ; Perform relative branch
+
+; JZ path
+	.text:0040421F     jmp     [ebx+VMContext.fpVMNext]         ; Proceed to following instruction

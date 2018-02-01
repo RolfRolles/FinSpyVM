@@ -1,0 +1,10 @@
+#!/usr/bin/python
+import sys
+from Pandemic.X86.X86Yacc import X86Yacc
+
+if(len(sys.argv) != 2):
+	print "Usage: %s \"instruction to validate\"" % sys.argv[0]
+	sys.exit()
+
+res = X86Yacc().Parse(sys.argv[1])
+print res, "(%r) was valid" % res

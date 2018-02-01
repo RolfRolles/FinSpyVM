@@ -1,0 +1,21 @@
+.text:00403EC0     mov     edi, [ebx+VMContext.pScratch]  ; EDI := dynamically generated code stack
+.text:00403E8E     mov     eax, [ebx+VMContext.SavedESP1] ; EAX := Saved ESP
+.text:00403EAC     and     eax, 2Fh                       
+.text:00403EDF     add     edi, eax                       ; Add a "random" amount < 0x30 to EDI
+.text:00403EFD     push    edi
+.text:00403EE8     mov     word ptr [edi], 6ACh           ; Stupid obfuscation
+.text:00403E5E     xor     word ptr [edi], 6731h          ; In total, write 9C 61 (popf/popa)
+.text:00403F08     add     edi, 2                         
+.text:00403E80     lea     esi, [ebx+VMContext.CurrentInsn.InsnData]
+.text:00403E55     movzx   ecx, [ebx+VMContext.CurrentInsn.DataLength]
+.text:00403E71     rep movsb                              ; Copy the x86 machine code from Instruction->Data
+.text:00403F1E     mov     byte ptr [edi], 0E9h           ; More stupid obfuscation
+.text:00403F34     xor     byte ptr [edi], 81h            ; Write 68 (push dword...)
+.text:00403E2D     mov     eax, [ebx+VMContext.fpVMEntry] ; EAX := Ordinary VM re-entry
+.text:00403E99     mov     [edi+1], eax                   ; Complete x86 instruction: push fpVMEntry
+.text:00403E37     mov     byte ptr [edi+5], 6Ch          
+.text:00403EA2     xor     byte ptr [edi+5], 0AFh         ; Write C3 (retn)
+.text:00403EB4     add     dword ptr [ebx+VMContext.pCurrInsn], size VMInstruction ; Proceed to next instruction
+.text:00403F2A     pop     eax                            ; EAX := start of where we just wrote x86 machine code
+.text:00403ECC     mov     esp, [ebx+VMContext.SavedESP1] ; Restore host ESP
+.text:00403E40     jmp     eax                            ; Branch to the code we just generated

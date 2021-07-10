@@ -43,7 +43,7 @@ class deobx86_t(idaapi.plugin_t):
 	def init(self):
 		self.hook = None
 		file_md5 = ''.join(['{0:02x}'.format(i).upper() for i in idc.retrieve_input_file_md5()])
-		if file_md5 != input_md5 or idaapi.ph_get_id() != idaapi.PLFM_386:
+		if file_md5 != None and (file_md5 != input_md5 or idaapi.ph_get_id() != idaapi.PLFM_386):
 			return idaapi.PLUGIN_SKIP
 				
 		self.hook = deobX86Hook()

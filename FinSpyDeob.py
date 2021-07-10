@@ -19,16 +19,16 @@ class deobX86Hook(idaapi.IDP_Hooks):
 		
 		elif b1 == 0x0F:
 			b1_1 = idaapi.get_byte(insn.ea+1)
-			d1   = idaapi.get_long(insn.ea+2)
+			d1   = idaapi.get_dword(insn.ea+2)
 			b2   = idaapi.get_byte(insn.ea+6)
 			b2_1 = idaapi.get_byte(insn.ea+7)
-			d2   = idaapi.get_long(insn.ea+8)
+			d2   = idaapi.get_dword(insn.ea+8)
 			if b2 == 0x0F and b1_1 ^ 0x01 == b2_1 and d1-6 == d2:
 				idaapi.put_byte(insn.ea, 0xE9)
-				idaapi.put_long(insn.ea+1, d1+1)
+				idaapi.put_dword(insn.ea+1, d1+1)
 				idaapi.put_byte(insn.ea+5, 0x90)
 				idaapi.put_word(insn.ea+6, 0x9090)
-				idaapi.put_long(insn.ea+8, 0x90909090)
+				idaapi.put_dword(insn.ea+8, 0x90909090)
 			
 		return False
 
